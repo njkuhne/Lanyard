@@ -1,0 +1,79 @@
+# Lanyard
+
+> New session? Read `HANDOFF.md` first. It says where the last session left off.
+
+Mac menu bar app for home server / homelab people. You register servers and
+the services each one has; the menu shows each server with one icon per
+service, and clicking an icon opens the right tool (browser, Finder, Screen
+Sharing, Terminal…) pointed at that server. Open source (MIT), shipping on the
+Mac App Store.
+
+## Build & run
+
+```sh
+# Build (no signing needed locally)
+xcodebuild -project Lanyard.xcodeproj -scheme Lanyard -configuration Debug \
+  -derivedDataPath build/DerivedData build 2>&1 | xcbeautify || true
+# (no xcbeautify? drop the pipe, or: grep -E "error:|warning:")
+
+# Run the built app
+open build/DerivedData/Build/Products/Debug/Lanyard.app
+
+# Quit a running copy before relaunching
+pkill -x Lanyard
+```
+
+After any change: build, fix every error, and re-build until clean before
+reporting done. Treat new warnings as worth fixing too.
+
+## Project status
+
+- v0.1 was written without ever being compiled. **First job: get a clean build.**
+- Then launch it and check the menu bar icon, the dropdown, and Edit Servers….
+
+## How it works
+
+- `Sources/Lanyard/LanyardApp.swift` — `@main`, `MenuBarExtra` with `.window` style.
+  Dock icon hidden via `LSUIElement` in `Resources/Info.plist` and `.accessory` policy.
+- `ConfigStore.swift` — owns `servers.yaml` in Application Support (inside the
+  sandbox container: `~/Library/Containers/net.nickopolis.Lanyard/Data/Library/Application Support/Lanyard/servers.yaml`).
+  Creates a sample on first launch, watches the file and reloads on change,
+  validates before every save, keeps the last good config if the file is broken.
+- `ConfigParser.swift` — YAML → model via Yams, with human-readable errors.
+  Services accept several shorthand forms (`- ssh`, `- web: 8080`,
+  `- web: { port: 5001, https: true }`, `- custom: { url: "…{host}…" }`).
+- `Model.swift`, `ServiceKind.swift` — model; each service turns into a URL
+  (`http(s)`, `smb`, `nfs`, `vnc`, `ssh`, `sftp`, `rdp`, or custom) that is
+  handed to `NSWorkspace.open`, which routes it to the right app.
+- `MenuContentView.swift` — the dropdown: server rows, service icon buttons,
+  dividers, error banner, footer with Edit Servers… and a gear menu.
+- `ConfigEditorView.swift`, `EditorModel.swift`, `EditorWindow.swift` — the
+  editor window: a **Servers** tab (form, drag to reorder, add servers,
+  dividers, services) and a **YAML** tab (raw text you can paste in and save).
+  The form tab writes YAML back out with `EditorModel.yaml(from:)`, which drops comments.
+
+## Decisions (keep these)
+
+- **Mac App Store app**, so it stays **sandboxed** (`Resources/Lanyard.entitlements`).
+  Don't read config from `~/.config` or anywhere outside the container.
+- **YAML is the source of truth**; the GUI editor reads and writes the same file.
+  Users must be able to paste a whole config in and save it.
+- Nothing is auto-discovered; everything is user-configured.
+- One host per server for v1 (no LAN vs VPN address switching yet).
+- Never store passwords — usernames at most; macOS/Keychain handle credentials.
+- macOS 13+ minimum. SwiftUI first, AppKit where SwiftUI falls short.
+- Only dependency is Yams. Ask before adding another.
+
+## Ideas not built yet
+
+- `afp` and `ftp` as first-class service types (work today as `custom`).
+- Multiple addresses per server (LAN / Tailscale / external).
+- Reachability dot per server.
+- Keyboard navigation in the dropdown; global hotkey to open it.
+- Real app icon (the current one in `Resources/Assets.xcassets` is a placeholder).
+
+## Files you can ignore
+
+- `Package.swift` + `scripts/build-app.sh` — an older SwiftPM build path; the
+  Xcode project is canonical. Keep them in sync only if they still build.
+- `project.yml` — XcodeGen spec equivalent to the project; optional.

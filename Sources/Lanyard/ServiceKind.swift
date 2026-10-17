@@ -1,0 +1,98 @@
+import Foundation
+
+enum ServiceKind: String, CaseIterable {
+    case web, smb, nfs, vnc, ssh, sftp, rdp, custom
+
+    /// Accepts the canonical names plus a few friendly aliases.
+    init?(alias raw: String) {
+        switch raw.lowercased() {
+        case "web", "http", "https", "browser": self = .web
+        case "smb", "files", "filesharing", "file-sharing", "fileshare": self = .smb
+        case "nfs": self = .nfs
+        case "vnc", "screensharing", "screen-sharing", "screen": self = .vnc
+        case "ssh", "terminal", "shell": self = .ssh
+        case "sftp": self = .sftp
+        case "rdp", "remote-desktop", "remotedesktop": self = .rdp
+        case "custom", "link", "url": self = .custom
+        default: return nil
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .web: return "Web"
+        case .smb: return "File Sharing (SMB)"
+        case .nfs: return "File Sharing (NFS)"
+        case .vnc: return "Screen Sharing"
+        case .ssh: return "SSH"
+        case .sftp: return "SFTP"
+        case .rdp: return "Remote Desktop"
+        case .custom: return "Link"
+        }
+    }
+
+    /// SF Symbol shown in the menu.
+    var defaultSymbol: String {
+        switch self {
+        case .web: return "globe"
+        case .smb, .nfs: return "folder"
+        case .vnc: return "display"
+        case .ssh: return "terminal"
+        case .sftp: return "arrow.up.arrow.down.circle"
+        case .rdp: return "pc"
+        case .custom: return "link"
+        }
+    }
+}
+
+extension Service {
+    var symbol: String { icon ?? kind.defaultSymbol }
+    var title: String { label ?? kind.displayName }
+
+    /// The URL handed to macOS, which routes each scheme to the right app:
+    /// http(s) → browser, smb/nfs → Finder, vnc → Screen Sharing, ssh → Terminal.
+    func url(for server: Server) -> URL? {
+        let user = self.user ?? server.user
+
+        if let template = url {
+            let filled = template
+                .replacingOccurrences(of: "{host}", with: server.host)
+                .replacingOccurrences(of: "{user}", with: user ?? "")
+                .replacingOccurrences(of: "{port}", with: port.map { String($0) } ?? "")
+            return URL(string: filled)
+        }
+
+        var components = URLComponents()
+        components.host = server.host
+        components.port = port
+        if let path, !path.isEmpty {
+            components.path = path.hasPrefix("/") ? path : "/" + path
+        }
+
+        switch kind {
+        case .web:
+            components.scheme = (https ?? (port == 443)) ? "https" : "http"
+        case .smb:
+            components.scheme = "smb"
+            components.user = user
+        case .nfs:
+            components.scheme = "nfs"
+        case .vnc:
+            components.scheme = "vnc"
+            components.user = user
+        case .ssh:
+            components.scheme = "ssh"
+            components.user = user
+        case .sftp:
+            components.scheme = "sftp"
+            components.user = user
+        case .rdp:
+            var address = server.host
+            if let port { address += ":\(port)" }
+            return URL(string: "rdp://full%20address=s:\(address)")
+        case .custom:
+            return nil
+        }
+        return components.url
+    }
+}
