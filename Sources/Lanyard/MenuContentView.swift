@@ -242,14 +242,27 @@ struct ServiceGlyph: View {
 struct LetterBadge: View {
     let text: String
 
+    // One size for every badge; at 10pt capitals land vertically centred with no
+    // offset, measured from rendered output.
+    static let fontSize: CGFloat = 10
+
+    /// Fits the actual letters (W is far wider than I) with at least 4pt either side,
+    /// in whole points so the outline stays on pixel boundaries.
+    static func width(for text: String, fontSize: CGFloat = fontSize) -> CGFloat {
+        var font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+        if let rounded = font.fontDescriptor.withDesign(.rounded) {
+            font = NSFont(descriptor: rounded, size: fontSize) ?? font
+        }
+        let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
+        return max(16, ceil(textWidth) + 8)
+    }
+
     var body: some View {
-        // Sizes chosen by measuring rendered margins: at 10pt (1–2 letters) and 8.5pt
-        // (3 letters) capitals land centred with no offset. Whole-point frame and
-        // outline keep every edge on a pixel, so it stays sharp at 1x.
         Text(text)
-            .font(.system(size: text.count >= 3 ? 8.5 : 10, weight: .bold, design: .rounded))
+            .font(.system(size: Self.fontSize, weight: .bold, design: .rounded))
             .lineLimit(1)
-            .frame(width: CGFloat(12 + 4 * max(text.count, 1)), height: 16)
+            .fixedSize()
+            .frame(width: Self.width(for: text), height: 16)
             .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(lineWidth: 1))
     }
 }

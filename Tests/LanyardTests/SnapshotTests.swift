@@ -79,14 +79,15 @@ final class SnapshotTests: XCTestCase {
     func testServiceButtonHoverPadding() {
         let server = Server(id: 1, name: "Box", host: "box.lan", icon: nil, services: [])
         let row = HStack(spacing: 2) {
-            ForEach([Service(id: 1, kind: .ssh), Service(id: 2, kind: .web, badge: "G"),
-                     Service(id: 3, kind: .web, badge: "GF"), Service(id: 4, kind: .web, badge: "DIR")]) { service in
+            ForEach([Service(id: 1, kind: .ssh), Service(id: 2, kind: .web, badge: "I"), Service(id: 3, kind: .web, badge: "W"),
+                     Service(id: 4, kind: .web, badge: "GF"), Service(id: 5, kind: .web, badge: "PW"), Service(id: 6, kind: .web, badge: "VW"),
+                     Service(id: 7, kind: .web, badge: "DIR"), Service(id: 8, kind: .web, badge: "WWW")]) { service in
                 ServiceButton(service: service, server: server, forceHover: true)
             }
         }
         .padding(8)
         .background(Color(nsColor: .windowBackgroundColor))
-        assertSnapshot(row, named: "service-buttons-hover", width: 170, height: 40)
+        assertSnapshot(row, named: "service-buttons-hover", width: 300, height: 40)
     }
 
     func testMenuPerServerDisplay() {
