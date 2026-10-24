@@ -7,14 +7,15 @@ enum SampleConfig {
 # the order in the menu. Use `- divider` or `- divider: Title` to group them.
 #
 # Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, rdp, custom
-# Service options: port, path, user, https (web), label, icon (any SF Symbol), url
+# Service options: port, path, user, https, label, icon (any SF Symbol), url
+# Web services use HTTPS unless you add `https: false` (or the port is 80).
 # In a custom url, {host}, {user} and {port} are filled in for you.
 
 servers:
   - name: NAS
     host: nas.local
     services:
-      - web: { port: 5001, https: true }
+      - web: 5001
       - smb
 
   - name: Mac mini

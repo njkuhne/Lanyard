@@ -7,7 +7,7 @@ struct EditorService: Identifiable, Equatable {
     var port = ""
     var path = ""
     var user = ""
-    var https = false
+    var https = true
     var label = ""
     var icon = ""
     var url = ""
@@ -45,7 +45,7 @@ enum EditorModel {
                             port: s.port.map { String($0) } ?? "",
                             path: s.path ?? "",
                             user: s.user ?? "",
-                            https: s.https ?? false,
+                            https: s.https ?? (s.port != 80),
                             label: s.label ?? "",
                             icon: s.icon == s.kind.defaultSymbol ? "" : (s.icon ?? ""),
                             url: s.url ?? ""
@@ -93,7 +93,8 @@ enum EditorModel {
             add("port", s.port)
             add("path", s.path)
             add("user", s.user)
-            if s.kind == .web && s.https { options.append("https: true") }
+            let impliedHTTPS = s.port.trimmingCharacters(in: .whitespaces) != "80"
+            if s.kind == .web && s.https != impliedHTTPS { options.append("https: \(s.https)") }
         }
         add("label", s.label)
         add("icon", s.icon)

@@ -87,7 +87,7 @@ enum ConfigParser {
     ///   - web: 8080                       (port)
     ///   - smb: /photos                    (path)
     ///   - web: https://nas.local:5001     (full URL)
-    ///   - web: { port: 5001, https: true }
+    ///   - web: { port: 8080, https: false }   (web is HTTPS unless told otherwise)
     ///   - { type: custom, url: "https://{host}:9443", icon: shippingbox, label: Portainer }
     private static func parseService(_ item: Any, server: String, nextID: () -> Int) throws -> Service {
         let typeName: String
@@ -121,7 +121,7 @@ enum ConfigParser {
         }
 
         var https = bool(options["https"]) ?? bool(options["secure"])
-        if https == nil && typeName.lowercased() == "https" { https = true }
+        if https == nil && typeName.lowercased() == "http" { https = false }
 
         let service = Service(
             id: nextID(),

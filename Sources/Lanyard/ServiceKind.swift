@@ -71,7 +71,7 @@ extension Service {
 
         switch kind {
         case .web:
-            components.scheme = (https ?? (port == 443)) ? "https" : "http"
+            components.scheme = (https ?? (port != 80)) ? "https" : "http"
         case .smb:
             components.scheme = "smb"
             components.user = user

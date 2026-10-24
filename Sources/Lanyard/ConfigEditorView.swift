@@ -346,13 +346,27 @@ struct ServiceEditor: View {
     private var hasOverrides: Bool {
         !service.port.isEmpty || !service.path.isEmpty || !service.user.isEmpty
             || !service.label.isEmpty || !service.icon.isEmpty
-            || (service.kind == .web && service.https)
+            || (service.kind == .web && !service.https)
             || (service.kind == .custom && !service.url.isEmpty)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showOptions.toggle() }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(showOptions ? 90 : 0))
+                        .frame(width: 12, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(showOptions ? "Hide options" : "Show options")
+                .accessibilityLabel(showOptions ? "Hide options" : "Show options")
+
                 Image(systemName: SymbolCatalog.resolved(service.icon, fallback: service.kind.defaultSymbol))
                     .frame(width: 18)
                 Picker("Type", selection: $service.kind) {
@@ -362,19 +376,7 @@ struct ServiceEditor: View {
                 }
                 .labelsHidden()
                 .fixedSize()
-                if service.kind == .web {
-                    Toggle("HTTPS", isOn: $service.https)
-                        .toggleStyle(.checkbox)
-                }
                 Spacer()
-                Button {
-                    withAnimation { showOptions.toggle() }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(hasOverrides ? .primary : .secondary)
-                }
-                .buttonStyle(.borderless)
-                .help("Customize")
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
                 }
@@ -406,9 +408,13 @@ struct ServiceEditor: View {
                         SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
                     }
                     .labelsHidden()
+                    if service.kind == .web {
+                        Toggle("Use HTTPS", isOn: $service.https)
+                            .toggleStyle(.checkbox)
+                    }
                 }
                 .textFieldStyle(.roundedBorder)
-                .padding(.leading, 26)
+                .padding(.leading, 46)
             }
         }
         .padding(.vertical, 4)
