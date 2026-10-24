@@ -115,7 +115,7 @@ final class SnapshotTests: XCTestCase {
         let ssh = EditorService(kind: .ssh, url: "ssh://admin@docker.local")
         let form = Form {
             Section("Services") {
-                ServiceEditor(service: .constant(web), serverAddress: "docker.local", startExpanded: true) {}
+                ServiceEditor(service: .constant(web), serverAddress: "docker.local", startExpanded: true, onDragStart: { NSItemProvider() }) {}
                 ServiceEditor(service: .constant(ssh), serverAddress: "docker.local", startExpanded: true) {}
                 ServiceEditor(service: .constant(EditorService(kind: .smb)), serverAddress: "docker.local", startExpanded: true) {}
             }

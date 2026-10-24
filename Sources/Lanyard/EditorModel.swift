@@ -57,6 +57,14 @@ struct EditorItem: Identifiable, Equatable {
     }
 
     /// Another service on this server showing the same badge, which would be ambiguous in the menu.
+    /// Moves a service into another's place, as dragging one row onto another does.
+    mutating func moveService(_ id: EditorService.ID, to target: EditorService.ID) {
+        guard id != target,
+              let from = services.firstIndex(where: { $0.id == id }),
+              let to = services.firstIndex(where: { $0.id == target }) else { return }
+        services.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+    }
+
     func badgeClash(for service: EditorService) -> EditorService? {
         guard !service.badge.isEmpty else { return nil }
         return services.first { $0.id != service.id && $0.badge.lowercased() == service.badge.lowercased() }

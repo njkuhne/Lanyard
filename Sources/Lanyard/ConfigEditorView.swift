@@ -160,6 +160,7 @@ struct EditorBottomBar: View {
 
 struct ServerEditor: View {
     @Binding var item: EditorItem
+    @State private var dragging: EditorService.ID?
 
     var body: some View {
         Form {
@@ -199,9 +200,18 @@ struct ServerEditor: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(item.services) { service in
-                    ServiceEditor(service: binding(for: service), serverAddress: item.host, badgeClash: item.badgeClash(for: service)?.title) {
+                    ServiceEditor(
+                        service: binding(for: service),
+                        serverAddress: item.host,
+                        badgeClash: item.badgeClash(for: service)?.title,
+                        onDragStart: {
+                            dragging = service.id
+                            return NSItemProvider(object: service.id.uuidString as NSString)
+                        }
+                    ) {
                         item.services.removeAll { $0.id == service.id }
                     }
+                    .onDrop(of: [.text], delegate: ServiceDropDelegate(target: service.id, item: $item, dragging: $dragging))
                 }
             } header: {
                 Text("Services")
@@ -279,6 +289,7 @@ struct ServiceEditor: View {
     @Binding var service: EditorService
     var badgeClash: String?
     var serverAddress = ""
+    var onDragStart: (() -> NSItemProvider)?
     var onDelete: () -> Void
     @State private var showOptions: Bool
     @State private var useBadge: Bool
@@ -288,11 +299,13 @@ struct ServiceEditor: View {
         serverAddress: String = "",
         badgeClash: String? = nil,
         startExpanded: Bool = false,
+        onDragStart: (() -> NSItemProvider)? = nil,
         onDelete: @escaping () -> Void
     ) {
         _service = service
         self.serverAddress = serverAddress
         self.badgeClash = badgeClash
+        self.onDragStart = onDragStart
         // A new app service starts open so its app can be chosen.
         _showOptions = State(initialValue: startExpanded || (service.wrappedValue.kind == .app && service.wrappedValue.bundle.isEmpty))
         _useBadge = State(initialValue: service.wrappedValue.showsBadge)
@@ -310,6 +323,16 @@ struct ServiceEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
+                if let onDragStart {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 16, height: 20)
+                        .contentShape(Rectangle())
+                        .onDrag(onDragStart)
+                        .help("Drag to reorder")
+                        .accessibilityLabel("Reorder")
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
@@ -579,5 +602,26 @@ struct AppIcon: View {
                 .font(.system(size: size * 0.8))
                 .frame(width: size, height: size)
         }
+    }
+}
+
+/// Moves the dragged service into the row it's dragged over, so rows shuffle live.
+private struct ServiceDropDelegate: DropDelegate {
+    let target: EditorService.ID
+    @Binding var item: EditorItem
+    @Binding var dragging: EditorService.ID?
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging else { return }
+        withAnimation(.easeInOut(duration: 0.15)) { item.moveService(dragging, to: target) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
     }
 }

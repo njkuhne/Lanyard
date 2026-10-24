@@ -425,3 +425,17 @@ final class AppearanceModeTests: XCTestCase {
         XCTAssertEqual(AppearanceMode.dark.appearanceName, "NSAppearanceNameDarkAqua")
     }
 }
+
+final class ServiceOrderTests: XCTestCase {
+    func testMovingServices() {
+        let a = EditorService(kind: .web), b = EditorService(kind: .smb), c = EditorService(kind: .ssh)
+        var item = EditorItem(services: [a, b, c])
+        item.moveService(a.id, to: c.id)
+        XCTAssertEqual(item.services.map(\.kind), [.smb, .ssh, .web], "down onto the last row")
+        item.moveService(a.id, to: b.id)
+        XCTAssertEqual(item.services.map(\.kind), [.web, .smb, .ssh], "up onto the first row")
+        item.moveService(b.id, to: b.id)
+        item.moveService(UUID(), to: b.id)
+        XCTAssertEqual(item.services.map(\.kind), [.web, .smb, .ssh], "no-ops leave the order alone")
+    }
+}
