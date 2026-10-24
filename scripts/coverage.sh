@@ -10,7 +10,9 @@ LOGIC="ConfigParser ConfigStore EditorModel EditorState Model ServiceKind Symbol
 swift test --enable-code-coverage "$@" >/dev/null
 JSON=$(swift test --show-codecov-path)
 PROFDATA="$(dirname "$JSON")/default.profdata"
-BIN="$(dirname "$(dirname "$JSON")")/LanyardTests.xctest/Contents/MacOS/LanyardTests"
+# The bundle is LanyardTests.xctest or LanyardPackageTests.xctest depending on the toolchain.
+BUNDLE=$(ls -d "$(dirname "$(dirname "$JSON")")"/*.xctest | head -1)
+BIN=$(ls "$BUNDLE"/Contents/MacOS/* | head -1)
 FILES=$(for f in $LOGIC; do printf "Sources/Lanyard/%s.swift " "$f"; done)
 
 echo "Logic line coverage:"
