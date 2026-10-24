@@ -127,14 +127,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # A fixed-name copy, so releases/latest/download/Lanyard.dmg always works.
+          # One asset with a fixed name, so releases/latest/download/Lanyard.dmg always works.
           cp build/Lanyard-*.dmg build/Lanyard.dmg
           if [ "$PRERELEASE" = "true" ]; then FLAGS=(--prerelease --latest=false); else FLAGS=(--latest); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md" "${FLAGS[@]}"
-            gh release upload "$TAG" build/Lanyard-[0-9]*.dmg build/Lanyard.dmg --clobber
+            gh release upload "$TAG" build/Lanyard.dmg --clobber
           else
-            gh release create "$TAG" build/Lanyard-[0-9]*.dmg build/Lanyard.dmg --title "Lanyard ${TAG#v}" \
+            gh release create "$TAG" build/Lanyard.dmg --title "Lanyard ${TAG#v}" \
               --notes-file "$RUNNER_TEMP/notes.md" --verify-tag "${FLAGS[@]}"
           fi
 
