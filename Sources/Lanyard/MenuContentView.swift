@@ -241,15 +241,14 @@ struct LetterBadge: View {
     let text: String
 
     var body: some View {
+        // Sizes chosen by measuring rendered margins: at 10pt (1–2 letters) and 8.5pt
+        // (3 letters) capitals land centred with no offset. Whole-point frame and
+        // outline keep every edge on a pixel, so it stays sharp at 1x.
         Text(text)
-            .font(.system(size: text.count >= 3 ? 8 : 9.5, weight: .bold, design: .rounded))
-            .tracking(text.count >= 3 ? -0.3 : 0)
-            .monospacedDigit()
+            .font(.system(size: text.count >= 3 ? 8.5 : 10, weight: .bold, design: .rounded))
             .lineLimit(1)
-            // Capitals sit high in their line box; nudge them to the optical centre.
-            .offset(y: -0.5)
             .frame(width: CGFloat(12 + 4 * max(text.count, 1)), height: 16)
-            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(lineWidth: 1.2))
+            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(lineWidth: 1))
     }
 }
 
