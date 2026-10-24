@@ -19,9 +19,15 @@ servers:
     address: docker.local
     services:
       - web: { port: 9443, name: Portainer, badge: PT }
-      - web: { port: 3000, name: Grafana }
-      - web: { port: 8123, name: Home Assistant }
+      - web: { port: 3000, name: Grafana, badge: GF }
+      - web: { port: 8123, name: Home Assistant, badge: HA }
       - ssh
+
+  - name: Gaming PC
+    address: gaming-pc.local
+    services:
+      - app: { bundle: com.moonlight-stream.Moonlight, name: Moonlight }
+      - smb
 
   - divider: Remote
 

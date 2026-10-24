@@ -12,6 +12,7 @@ struct EditorService: Identifiable, Equatable {
     var icon = ""
     var url = ""
     var badge = ""
+    var bundle = ""
 }
 
 extension EditorService {
@@ -21,12 +22,10 @@ extension EditorService {
         set { badge = String(newValue.prefix(3)) }
     }
 
-    /// The badge the dropdown will show, mirroring `Service.badgeText`.
-    var effectiveBadge: String? {
-        if !badge.isEmpty { return badge }
-        guard icon.isEmpty, kind == .web,
-              let first = label.trimmingCharacters(in: .whitespaces).first else { return nil }
-        return String(first).uppercased()
+    /// A service shows an icon or a badge, never both: choosing one clears the other.
+    var showsBadge: Bool {
+        get { !badge.isEmpty }
+        set { if newValue { icon = "" } else { badge = "" } }
     }
 
     var title: String {
@@ -48,6 +47,7 @@ extension EditorService {
         let trimmed = { (s: String) in s.trimmingCharacters(in: .whitespaces) }
         var parts: [String] = []
         if !trimmed(label).isEmpty { parts.append(trimmed(label)) }
+        if kind == .app, !trimmed(bundle).isEmpty { parts.append(trimmed(bundle)) }
         if hasURL { return (parts + [trimmed(url)]).joined(separator: " · ") }
         if !trimmed(user).isEmpty { parts.append(trimmed(user)) }
         if !trimmed(port).isEmpty { parts.append(":" + trimmed(port)) }
@@ -73,8 +73,8 @@ struct EditorItem: Identifiable, Equatable {
 
     /// Another service on this server showing the same badge, which would be ambiguous in the menu.
     func badgeClash(for service: EditorService) -> EditorService? {
-        guard let badge = service.effectiveBadge else { return nil }
-        return services.first { $0.id != service.id && $0.effectiveBadge?.lowercased() == badge.lowercased() }
+        guard !service.badge.isEmpty else { return nil }
+        return services.first { $0.id != service.id && $0.badge.lowercased() == service.badge.lowercased() }
     }
 }
 
@@ -99,7 +99,8 @@ enum EditorModel {
                             label: s.label ?? "",
                             icon: s.icon == s.kind.defaultSymbol ? "" : (s.icon ?? ""),
                             url: s.url ?? "",
-                            badge: s.badge ?? ""
+                            badge: s.badge ?? "",
+                            bundle: s.bundle ?? ""
                         )
                     }
                 )
@@ -154,6 +155,7 @@ enum EditorModel {
             options.append("\(key): \(Int(v) != nil ? v : quote(v))")
         }
         let hasURL = !s.url.trimmingCharacters(in: .whitespaces).isEmpty
+        add("bundle", s.bundle)
         add("url", s.url)
         if !hasURL {
             add("port", s.port)

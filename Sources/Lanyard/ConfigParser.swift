@@ -141,9 +141,18 @@ enum ConfigParser {
             }
         }
 
+        // `- app: com.example.App` arrives as a path; `app: { bundle: … }` is the long form.
+        let bundle = kind == .app ? string(options["bundle"]) ?? string(options["path"]) : nil
+        if kind == .app && bundle == nil {
+            throw ConfigError("\(server): an `app` service needs an app, like `- app: com.microsoft.rdc.macos`")
+        }
+
         let badge = string(options["badge"])
         if let badge, !(1...3).contains(badge.count) {
             throw ConfigError("\(server): badge can be 1–3 characters (“\(badge)” has \(badge.count))")
+        }
+        if badge != nil && options["icon"] != nil {
+            throw ConfigError("\(server): a service shows either an `icon:` or a `badge:`, not both")
         }
 
         let service = Service(
@@ -152,11 +161,12 @@ enum ConfigParser {
             label: string(options["name"]) ?? string(options["label"]),
             icon: string(options["icon"]),
             port: int(options["port"]),
-            path: string(options["path"]),
+            path: kind == .app ? nil : string(options["path"]),
             user: string(options["user"]),
             https: https,
             url: string(options["url"]),
-            badge: badge
+            badge: badge,
+            bundle: bundle
         )
         return service
     }

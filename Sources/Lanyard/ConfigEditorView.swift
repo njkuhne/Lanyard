@@ -196,11 +196,6 @@ struct ServerEditor: View {
                 }
             } header: {
                 Text("Services")
-            } footer: {
-                if item.services.count > ServiceStrip.maxButtons {
-                    Text("The first \(ServiceStrip.maxButtons - 1) show in the menu; the rest are under +\(ServiceStrip.split(item.services.count).hidden).")
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Section("Add a Service") {
@@ -276,11 +271,14 @@ struct ServiceEditor: View {
     var badgeClash: String?
     var onDelete: () -> Void
     @State private var showOptions: Bool
+    @State private var useBadge: Bool
 
     init(service: Binding<EditorService>, badgeClash: String? = nil, startExpanded: Bool = false, onDelete: @escaping () -> Void) {
         _service = service
         self.badgeClash = badgeClash
-        _showOptions = State(initialValue: startExpanded)
+        // A new app service starts open so its app can be chosen.
+        _showOptions = State(initialValue: startExpanded || (service.wrappedValue.kind == .app && service.wrappedValue.bundle.isEmpty))
+        _useBadge = State(initialValue: service.wrappedValue.showsBadge)
         self.onDelete = onDelete
     }
 
@@ -294,10 +292,18 @@ struct ServiceEditor: View {
                     .rotationEffect(.degrees(showOptions ? 90 : 0))
                     .frame(width: 12, height: 20)
                     .accessibilityHidden(true)
-                Image(systemName: SymbolCatalog.resolved(service.icon, fallback: service.kind.defaultSymbol))
-                    .symbolRenderingMode(.monochrome)
-                    .symbolVariant(.none)
-                    .frame(width: 18)
+                Group {
+                    if service.showsBadge {
+                        LetterBadge(text: service.badge)
+                    } else if service.kind == .app && service.icon.isEmpty {
+                        AppIcon(bundle: service.bundle, size: 16)
+                    } else {
+                        Image(systemName: SymbolCatalog.resolved(service.icon, fallback: service.kind.defaultSymbol))
+                            .symbolRenderingMode(.monochrome)
+                            .symbolVariant(.none)
+                    }
+                }
+                .frame(minWidth: 18)
                 Text(service.kind.displayName)
                     .fixedSize()
                 Text(service.summary)
@@ -318,11 +324,28 @@ struct ServiceEditor: View {
 
             if showOptions {
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
-                    optionRow("Port") {
-                        TextField("Port", text: $service.port,
-                                  prompt: Text(service.kind.defaultPort.map(String.init) ?? ""))
-                            .frame(width: 90)
-                            .disabled(service.hasURL)
+                    if service.kind == .app {
+                        optionRow("App") {
+                            HStack(spacing: 8) {
+                                AppIcon(bundle: service.bundle, size: 18)
+                                Text(service.bundle.isEmpty ? "None chosen" : AppInfo.name(for: service.bundle))
+                                    .foregroundStyle(service.bundle.isEmpty ? .secondary : .primary)
+                                Button("Choose…") {
+                                    if let bundle = AppInfo.choose() { service.bundle = bundle }
+                                }
+                            }
+                        }
+                        optionRow("Open URL") {
+                            TextField("Open URL", text: $service.url,
+                                      prompt: Text("Optional, handed to the app, e.g. myapp://{address}"))
+                        }
+                    } else {
+                        optionRow("Port") {
+                            TextField("Port", text: $service.port,
+                                      prompt: Text(service.kind.defaultPort.map(String.init) ?? ""))
+                                .frame(width: 90)
+                                .disabled(service.hasURL)
+                        }
                     }
                     if service.kind.usesPath {
                         optionRow("Path") {
@@ -344,26 +367,34 @@ struct ServiceEditor: View {
                     optionRow("Name") {
                         TextField("Name", text: $service.label, prompt: Text(service.kind.displayName))
                     }
-                    optionRow("Badge") {
-                        HStack(spacing: 8) {
-                            TextField("Badge", text: $service.badgeInput, prompt: Text("1–3"))
-                                .frame(width: 60)
-                            if let badge = service.effectiveBadge {
-                                LetterBadge(text: badge)
-                            }
-                            if let badgeClash {
-                                Label("Same badge as \(badgeClash)", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
-                            } else {
-                                Text("Shown instead of the icon")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    optionRow("Show") {
+                        Picker("Show", selection: $useBadge) {
+                            Text("Icon").tag(false)
+                            Text("Badge").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .fixedSize()
+                        .onChange(of: useBadge) { service.showsBadge = $0 }
+                    }
+                    if useBadge {
+                        optionRow("Badge") {
+                            HStack(spacing: 8) {
+                                TextField("Badge", text: $service.badgeInput, prompt: Text("1–3 letters"))
+                                    .frame(width: 90)
+                                if !service.badge.isEmpty {
+                                    LetterBadge(text: service.badge)
+                                }
+                                if let badgeClash {
+                                    Label("Same badge as \(badgeClash)", systemImage: "exclamationmark.triangle.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.orange)
+                                }
                             }
                         }
-                    }
-                    optionRow("Icon") {
-                        SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
+                    } else {
+                        optionRow("Icon") {
+                            SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
+                        }
                     }
                     if service.kind == .web {
                         optionRow("HTTPS") {
@@ -464,7 +495,7 @@ struct AddServerView: View {
                 Text("What do you open on it?")
                     .font(.headline)
                 HStack(spacing: 6) {
-                    ForEach(ServiceKind.allCases, id: \.self) { kind in
+                    ForEach(ServiceKind.allCases.filter { $0 != .app }, id: \.self) { kind in
                         AddServiceTile(kind: kind, isSelected: state.kinds.contains(kind)) {
                             state.toggle(kind)
                         }
@@ -531,5 +562,23 @@ struct AddServerView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(28)
+    }
+}
+
+/// An app's own icon, or the generic app symbol when it isn't installed.
+struct AppIcon: View {
+    let bundle: String
+    let size: CGFloat
+
+    var body: some View {
+        if let image = AppInfo.icon(for: bundle) {
+            Image(nsImage: image)
+                .resizable()
+                .frame(width: size, height: size)
+        } else {
+            Image(systemName: "app")
+                .font(.system(size: size * 0.8))
+                .frame(width: size, height: size)
+        }
     }
 }

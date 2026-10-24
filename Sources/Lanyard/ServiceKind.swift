@@ -1,7 +1,7 @@
 import Foundation
 
 enum ServiceKind: String, CaseIterable {
-    case web, smb, nfs, vnc, ssh, sftp
+    case web, smb, nfs, vnc, ssh, sftp, app
 
     /// Accepts the canonical names plus a few friendly aliases.
     init?(alias raw: String) {
@@ -12,6 +12,7 @@ enum ServiceKind: String, CaseIterable {
         case "vnc", "screensharing", "screen-sharing", "screen": self = .vnc
         case "ssh", "terminal", "shell": self = .ssh
         case "sftp": self = .sftp
+        case "app", "application", "launch": self = .app
         default: return nil
         }
     }
@@ -24,6 +25,7 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "Screen Sharing (VNC)"
         case .ssh: return "SSH"
         case .sftp: return "SFTP"
+        case .app: return "App"
         }
     }
 
@@ -39,6 +41,7 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "Screen Sharing"
         case .ssh: return "SSH"
         case .sftp: return "SFTP"
+        case .app: return "App"
         }
     }
 
@@ -50,6 +53,7 @@ enum ServiceKind: String, CaseIterable {
         case .nfs: return 2049
         case .vnc: return 5900
         case .ssh, .sftp: return 22
+        case .app: return nil
         }
     }
 
@@ -70,6 +74,7 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "display"
         case .ssh: return "terminal"
         case .sftp: return "arrow.up.arrow.down.circle"
+        case .app: return "app"
         }
     }
 }
@@ -78,17 +83,8 @@ extension Service {
     var symbol: String { SymbolCatalog.resolved(icon, fallback: kind.defaultSymbol) }
     var title: String { label ?? kind.displayName }
 
-    /// Text shown instead of the icon: the service's own badge, or for a named
-    /// web service with no custom icon, its first letter, so several web UIs on
-    /// one server don't all look like the same globe.
-    var badgeText: String? {
-        if let badge { return badge }
-        guard icon == nil, kind == .web,
-              let first = label?.trimmingCharacters(in: .whitespaces).first else { return nil }
-        return String(first).uppercased()
-    }
-
-    /// The URL handed to macOS, which routes each scheme to the right app:
+    /// The URL handed to macOS (or, for an app service, to that app), which routes
+    /// each scheme to the right app:
     /// http(s) → browser, smb/nfs → Finder, vnc → Screen Sharing, ssh → Terminal.
     func url(for server: Server) -> URL? {
         let user = self.user
@@ -126,6 +122,9 @@ extension Service {
         case .sftp:
             components.scheme = "sftp"
             components.user = user
+        case .app:
+            // An app with no URL is just launched; see `bundle`.
+            return nil
         }
         return components.url
     }

@@ -42,9 +42,11 @@ final class ConfigParserTests: XCTestCase {
         let prefix = "servers:\n  - name: A\n    address: a\n    services:\n      - "
         XCTAssertEqual(parseError(prefix + "web: { badge: ABCD }\n"), "A: badge can be 1–3 characters (“ABCD” has 4)")
         XCTAssertNotNil(parseError(prefix + "web: { badge: \"\" }\n"))
+        XCTAssertEqual(parseError(prefix + "web: { badge: G, icon: cpu }\n"), "A: a service shows either an `icon:` or a `badge:`, not both")
         XCTAssertEqual(parseError(prefix + "{ port: 1, path: x }\n"), "A: each service needs a type, like `- ssh` or `- web: { port: 8080 }`")
         XCTAssertEqual(parseError(prefix + "[1, 2]\n"), "A: couldn't understand one of the services")
-        XCTAssertEqual(parseError(prefix + "gopher\n"), "A: unknown service “gopher”. Known types: web, smb, nfs, vnc, ssh, sftp")
+        XCTAssertEqual(parseError(prefix + "gopher\n"), "A: unknown service “gopher”. Known types: web, smb, nfs, vnc, ssh, sftp, app")
+        XCTAssertEqual(parseError(prefix + "app\n"), "A: an `app` service needs an app, like `- app: com.microsoft.rdc.macos`")
     }
 
     func testDividersAndDefaults() throws {
@@ -120,7 +122,7 @@ final class ServiceKindTests: XCTestCase {
         for kind in ServiceKind.allCases {
             XCTAssertFalse(kind.displayName.isEmpty)
             XCTAssertFalse(kind.tileName.isEmpty)
-            XCTAssertNotNil(kind.defaultPort)
+            XCTAssertEqual(kind.defaultPort == nil, kind == .app)
             XCTAssertTrue(SymbolCatalog.isAvailable(kind.defaultSymbol), kind.defaultSymbol)
         }
         XCTAssertTrue(ServiceKind.web.usesPath)
@@ -135,11 +137,8 @@ final class ServiceKindTests: XCTestCase {
     func testTitlesSymbolsAndBadges() {
         let labelled = Service(id: 1, kind: .web, label: " grafana")
         XCTAssertEqual(labelled.title, " grafana")
-        XCTAssertEqual(labelled.badgeText, "G")
-        XCTAssertEqual(Service(id: 6, kind: .ssh, badge: "SH").badgeText, "SH", "an explicit badge works for any type")
+
         XCTAssertEqual(labelled.symbol, "globe")
-        XCTAssertNil(Service(id: 2, kind: .web, label: "Grafana", icon: "shippingbox").badgeText)
-        XCTAssertNil(Service(id: 3, kind: .ssh, label: "Shell").badgeText)
         XCTAssertEqual(Service(id: 4, kind: .ssh).title, "SSH")
         XCTAssertEqual(Service(id: 5, kind: .ssh, icon: "no.such.symbol").symbol, "terminal")
     }
@@ -205,7 +204,7 @@ final class ConfigStoreTests: XCTestCase {
         try "servers:\n  - name: Oops\n".write(to: fileURL, atomically: true, encoding: .utf8)
         store.reload()
         XCTAssertEqual(store.errorMessage, "Oops: needs an `address:`")
-        XCTAssertEqual(store.config.entries.count, 5)
+        XCTAssertEqual(store.config.entries.count, 6)
     }
 
     func testMissingFileIsReported() throws {
@@ -324,18 +323,22 @@ final class BadgeAndLayoutTests: XCTestCase {
         XCTAssertEqual(service.badgeInput, "ABC")
     }
 
-    func testEffectiveBadgeAndTitle() {
-        XCTAssertEqual(EditorService(kind: .ssh, badge: "SH").effectiveBadge, "SH")
-        XCTAssertEqual(EditorService(kind: .web, label: "grafana").effectiveBadge, "G")
-        XCTAssertNil(EditorService(kind: .web, label: "Grafana", icon: "cpu").effectiveBadge)
-        XCTAssertNil(EditorService(kind: .ssh, label: "Shell").effectiveBadge)
+    func testIconOrBadgeAndTitle() {
+        var service = EditorService(kind: .ssh, icon: "cpu")
+        XCTAssertFalse(service.showsBadge)
+        service.showsBadge = true
+        XCTAssertEqual(service.icon, "", "choosing a badge clears the icon")
+        service.badge = "SH"
+        XCTAssertTrue(service.showsBadge)
+        service.showsBadge = false
+        XCTAssertEqual(service.badge, "", "choosing an icon clears the badge")
         XCTAssertEqual(EditorService(kind: .ssh, label: " Shell ").title, "Shell")
         XCTAssertEqual(EditorService(kind: .ssh).title, "SSH")
     }
 
     func testBadgeClash() {
-        let grafana = EditorService(kind: .web, label: "Grafana")
-        let gitea = EditorService(kind: .web, label: "gitea")
+        let grafana = EditorService(kind: .web, label: "Grafana", badge: "G")
+        let gitea = EditorService(kind: .web, label: "gitea", badge: "g")
         let shell = EditorService(kind: .ssh)
         let item = EditorItem(services: [grafana, gitea, shell])
         XCTAssertEqual(item.badgeClash(for: gitea)?.id, grafana.id)
@@ -343,13 +346,11 @@ final class BadgeAndLayoutTests: XCTestCase {
         XCTAssertNil(EditorItem(services: [grafana]).badgeClash(for: grafana))
     }
 
-    func testServiceStripOverflow() {
-        XCTAssertEqual(ServiceStrip.split(0).visible, 0)
-        XCTAssertEqual(ServiceStrip.split(5).visible, 5)
-        XCTAssertEqual(ServiceStrip.split(5).hidden, 0)
-        XCTAssertEqual(ServiceStrip.split(6).visible, 4)
-        XCTAssertEqual(ServiceStrip.split(6).hidden, 2)
-        XCTAssertEqual(ServiceStrip.split(15).hidden, 11)
+    func testFlowRowsWrap() {
+        XCTAssertEqual(FlowRows.rows(widths: [], maxWidth: 100, spacing: 2), [])
+        XCTAssertEqual(FlowRows.rows(widths: [26, 26, 26], maxWidth: 100, spacing: 2), [[0, 1, 2]])
+        XCTAssertEqual(FlowRows.rows(widths: [26, 26, 26, 26], maxWidth: 100, spacing: 2), [[0, 1, 2], [3]])
+        XCTAssertEqual(FlowRows.rows(widths: [150, 26], maxWidth: 100, spacing: 2), [[0], [1]], "an item wider than the line still gets its own line")
     }
 
     func testBadgesRoundTrip() throws {
@@ -371,5 +372,40 @@ final class BadgeAndLayoutTests: XCTestCase {
         XCTAssertEqual(EditorModel.appending(item, to: existing), existing + "\n" + entry)
         XCTAssertEqual(EditorModel.appending(item, to: existing + "\n"), existing + "\n" + entry)
         XCTAssertEqual(try ConfigParser.parse(EditorModel.appending(item, to: SampleConfig.starter)).entries.count, 1)
+    }
+}
+
+final class AppServiceTests: XCTestCase {
+    private let server = Server(id: 1, name: "PC", host: "pc.lan", icon: nil, services: [])
+
+    private func service(_ yaml: String) throws -> Service {
+        let config = try ConfigParser.parse("servers:\n  - name: PC\n    address: pc.lan\n    services:\n      - \(yaml)\n")
+        guard case .server(let server) = config.entries[0] else { throw ConfigError("no server") }
+        return server.services[0]
+    }
+
+    func testShortAndLongForms() throws {
+        let short = try service("app: com.microsoft.rdc.macos")
+        XCTAssertEqual(short.kind, .app)
+        XCTAssertEqual(short.bundle, "com.microsoft.rdc.macos")
+        XCTAssertNil(short.path)
+        XCTAssertNil(short.url(for: server), "no URL: the app is just launched")
+
+        let long = try service("launch: { bundle: com.example.App, url: \"example://{address}\", name: Example }")
+        XCTAssertEqual(long.bundle, "com.example.App")
+        XCTAssertEqual(long.url(for: server)?.absoluteString, "example://pc.lan")
+        XCTAssertEqual(long.title, "Example")
+        XCTAssertEqual(long.symbol, "app")
+    }
+
+    func testEditorRoundTripAndSummary() throws {
+        let config = try ConfigParser.parse("servers:\n  - name: PC\n    address: pc.lan\n    services:\n      - app: { bundle: com.example.App, name: Example }\n")
+        let items = EditorModel.items(from: config)
+        XCTAssertEqual(items[0].services[0].bundle, "com.example.App")
+        XCTAssertEqual(items[0].services[0].summary, "Example · com.example.App")
+        XCTAssertTrue(EditorModel.yaml(from: items).contains("- app: { bundle: com.example.App, name: Example }"))
+        XCTAssertFalse(ServiceKind.app.usesPath)
+        XCTAssertFalse(ServiceKind.app.usesUser)
+        XCTAssertEqual(ServiceKind.app.tileName, "App")
     }
 }

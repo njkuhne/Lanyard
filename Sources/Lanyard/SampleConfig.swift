@@ -7,8 +7,10 @@ enum SampleConfig {
 # Each server has a name, an address, and a list of services. The order here is
 # the order in the menu. Use `- divider` or `- divider: Title` to group them.
 #
-# Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp
-# Service options: port, path, user, https, badge (1–3 characters), name, icon (any SF Symbol), url
+# Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, app
+# An app service launches a Mac app: `- app: com.microsoft.rdc.macos`
+# Service options: port, path, user, https, name, url, and either icon (any SF
+# Symbol) or badge (1–3 characters) to show in the menu
 # Web uses HTTPS on 443 and common TLS ports (5001, 8006, 8443, 9443), HTTP on
 # any other port. Add `https: true` or `https: false` to say otherwise.
 # Give web a full `url` for anything else (another scheme, path or host);

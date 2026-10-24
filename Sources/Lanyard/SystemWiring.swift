@@ -53,6 +53,21 @@ extension ConfigStore {
 
 enum Launcher {
     static func open(_ service: Service, on server: Server) {
+        if service.kind == .app {
+            guard let bundle = service.bundle,
+                  let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else {
+                NSSound.beep()
+                return
+            }
+            closeMenu()
+            let configuration = NSWorkspace.OpenConfiguration()
+            if let url = service.url(for: server) {
+                NSWorkspace.shared.open([url], withApplicationAt: app, configuration: configuration)
+            } else {
+                NSWorkspace.shared.openApplication(at: app, configuration: configuration)
+            }
+            return
+        }
         guard let url = service.url(for: server) else {
             NSSound.beep()
             return
@@ -70,5 +85,32 @@ enum Launcher {
 
     static func closeMenu() {
         NSApp.keyWindow?.close()
+    }
+}
+
+/// Looks up installed apps for `app` services.
+enum AppInfo {
+    static func url(for bundle: String) -> URL? {
+        bundle.isEmpty ? nil : NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
+    }
+
+    static func name(for bundle: String) -> String {
+        guard let url = url(for: bundle) else { return bundle }
+        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
+
+    static func icon(for bundle: String) -> NSImage? {
+        url(for: bundle).map { NSWorkspace.shared.icon(forFile: $0.path) }
+    }
+
+    /// Asks for an app in /Applications and returns its bundle identifier.
+    static func choose() -> String? {
+        let panel = NSOpenPanel()
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        panel.canChooseDirectories = false
+        panel.prompt = "Choose"
+        guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        return Bundle(url: url)?.bundleIdentifier
     }
 }

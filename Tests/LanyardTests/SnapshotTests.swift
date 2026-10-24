@@ -124,7 +124,7 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testEditorDivider() {
-        assertSnapshot(editor(store(), selectedIndex: 3), named: "editor-divider", width: 780, height: 540)
+        assertSnapshot(editor(store(), selectedIndex: 4), named: "editor-divider", width: 780, height: 540)
     }
 
     func testEditorYAML() {

@@ -37,14 +37,26 @@ struct Service: Identifiable {
     var https: Bool?
     var url: String?
     var badge: String?  // 1–3 characters shown instead of the icon
+    var bundle: String?  // the app an `app` service launches, by bundle identifier
 }
 
-/// How many service buttons a dropdown row shows before collapsing the rest.
-enum ServiceStrip {
-    static let maxButtons = 5
-
-    /// Up to five services all show; beyond that the first four show plus a "+N" button.
-    static func split(_ count: Int) -> (visible: Int, hidden: Int) {
-        count <= maxButtons ? (count, 0) : (maxButtons - 1, count - maxButtons + 1)
+/// Line breaking for a row of service buttons: fill each line, then wrap.
+enum FlowRows {
+    /// Indexes of the items on each line, given item widths and the space available.
+    static func rows(widths: [CGFloat], maxWidth: CGFloat, spacing: CGFloat) -> [[Int]] {
+        var rows: [[Int]] = []
+        var current: [Int] = []
+        var x: CGFloat = 0
+        for (index, width) in widths.enumerated() {
+            if !current.isEmpty && x + width > maxWidth {
+                rows.append(current)
+                current = []
+                x = 0
+            }
+            current.append(index)
+            x += width + spacing
+        }
+        if !current.isEmpty { rows.append(current) }
+        return rows
     }
 }

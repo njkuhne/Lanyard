@@ -51,22 +51,31 @@ struct ServerRow: View {
     private var singleLine: Bool { compactRows || !showAddresses }
 
     var body: some View {
-        HStack(spacing: 8) {
-            if showServerIcons {
-                Image(systemName: SymbolCatalog.resolved(server.icon, fallback: "server.rack"))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 18)
+        // Everything on one line when it fits; otherwise the name gets its own
+        // line(s) and every service button wraps below it, so none are hidden.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                serverIcon
+                nameAndAddress(wrapping: false)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                HStack(spacing: 2) { serviceButtons }
+                    .fixedSize()
             }
 
-            nameAndAddress
-                .frame(minWidth: 100, alignment: .leading)
-                .help("\(server.name) — \(server.host)")
-
-            Spacer(minLength: 8)
-
-            ServiceStripView(server: server)
-                .fixedSize()
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: 8) {
+                    serverIcon
+                    nameAndAddress(wrapping: true)
+                    Spacer(minLength: 0)
+                }
+                if !server.services.isEmpty {
+                    FlowLayout(spacing: 2) { serviceButtons }
+                        .padding(.leading, showServerIcons ? 22 : -4)
+                }
+            }
         }
+        .help("\(server.name) — \(server.host)")
         .padding(.horizontal, 8)
         .padding(.vertical, singleLine ? 3 : 5)
         .frame(minHeight: singleLine ? 26 : nil)
@@ -95,8 +104,23 @@ struct ServerRow: View {
     }
 
     @ViewBuilder
-    private var nameAndAddress: some View {
-        if singleLine {
+    private var serverIcon: some View {
+        if showServerIcons {
+            Image(systemName: SymbolCatalog.resolved(server.icon, fallback: "server.rack"))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+        }
+    }
+
+    private var serviceButtons: some View {
+        ForEach(server.services) { service in
+            ServiceButton(service: service, server: server)
+        }
+    }
+
+    @ViewBuilder
+    private func nameAndAddress(wrapping: Bool) -> some View {
+        if singleLine && !wrapping {
             HStack(spacing: 6) {
                 Text(server.name)
                     .font(.system(size: 13, weight: .medium))
@@ -114,48 +138,58 @@ struct ServerRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(server.name)
                     .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
-                Text(server.host)
+                    .lineLimit(wrapping ? 2 : 1)
+                    .fixedSize(horizontal: false, vertical: wrapping)
+                if showAddresses {
+                    Text(server.host)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                }
             }
         }
     }
 }
 
-/// The row's service buttons: all of them up to five, otherwise four and a "+N" menu.
-struct ServiceStripView: View {
-    let server: Server
+/// Lays out service buttons left to right, wrapping onto as many lines as needed.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 2
 
-    var body: some View {
-        let split = ServiceStrip.split(server.services.count)
-        HStack(spacing: 2) {
-            ForEach(server.services.prefix(split.visible)) { service in
-                ServiceButton(service: service, server: server)
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes: [CGSize] = subviews.map { $0.sizeThatFits(.unspecified) }
+        let widths: [CGFloat] = sizes.map { $0.width }
+        let rows = FlowRows.rows(widths: widths, maxWidth: proposal.width ?? .infinity, spacing: spacing)
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+        for row in rows {
+            var rowWidth: CGFloat = 0
+            var rowHeight: CGFloat = 0
+            for index in row {
+                rowWidth += sizes[index].width
+                rowHeight = max(rowHeight, sizes[index].height)
             }
-            if split.hidden > 0 {
-                Menu {
-                    ForEach(server.services) { service in
-                        Button {
-                            Launcher.open(service, on: server)
-                        } label: {
-                            Text(service.title)
-                            Text(service.url(for: server)?.absoluteString ?? server.host)
-                        }
-                    }
-                } label: {
-                    Text("+\(split.hidden)")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 26, height: 24)
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .frame(width: 26, height: 24)
-                .help("\(split.hidden) more")
+            rowWidth += spacing * CGFloat(row.count - 1)
+            width = max(width, rowWidth)
+            height += rowHeight
+        }
+        height += spacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        var y = bounds.minY
+        let widths: [CGFloat] = sizes.map { $0.width }
+        for row in FlowRows.rows(widths: widths, maxWidth: bounds.width, spacing: spacing) {
+            var x = bounds.minX
+            var rowHeight: CGFloat = 0
+            for index in row {
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(sizes[index]))
+                x += sizes[index].width + spacing
+                rowHeight = max(rowHeight, sizes[index].height)
             }
+            y += rowHeight + spacing
         }
     }
 }
@@ -188,8 +222,10 @@ struct ServiceGlyph: View {
     let service: Service
 
     var body: some View {
-        if let badge = service.badgeText {
+        if let badge = service.badge {
             LetterBadge(text: badge)
+        } else if service.kind == .app, service.icon == nil, let bundle = service.bundle {
+            AppIcon(bundle: bundle, size: 16)
         } else {
             Image(systemName: service.symbol)
                 .symbolRenderingMode(.monochrome)
@@ -205,7 +241,11 @@ struct LetterBadge: View {
     var body: some View {
         Text(text)
             .font(.system(size: text.count >= 3 ? 8 : 9.5, weight: .bold, design: .rounded))
+            .tracking(text.count >= 3 ? -0.3 : 0)
+            .monospacedDigit()
             .lineLimit(1)
+            // Capitals sit high in their line box; nudge them to the optical centre.
+            .offset(y: -0.5)
             .frame(width: CGFloat(12 + 4 * max(text.count, 1)), height: 16)
             .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(lineWidth: 1.2))
     }
