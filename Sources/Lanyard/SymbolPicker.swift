@@ -1,7 +1,52 @@
+import AppKit
 import SwiftUI
 
+/// Large clickable icon square, used for a server's icon.
+struct SymbolWell: View {
+    @Binding var selection: String
+    let defaultSymbol: String
+    @State private var isPresented = false
+    @State private var hovering = false
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            Image(systemName: SymbolCatalog.resolved(selection, fallback: defaultSymbol))
+                .font(.system(size: 28))
+                .foregroundStyle(selection.isEmpty ? .secondary : .primary)
+                .frame(width: 64, height: 64)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.primary.opacity(hovering ? 0.09 : 0.045))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(
+                            isPresented ? Color.accentColor : Color.primary.opacity(0.15),
+                            style: StrokeStyle(lineWidth: isPresented ? 2 : 1, dash: selection.isEmpty ? [4, 3] : [])
+                        )
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help("Click to choose an icon")
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            SymbolGrid(selection: $selection, defaultSymbol: defaultSymbol, isPresented: $isPresented)
+        }
+        .contextMenu {
+            if !selection.isEmpty {
+                Button("Use Default Icon") { selection = "" }
+            }
+        }
+    }
+}
+
+/// Compact icon button for a service. Empty selection means "use the type's default".
 struct SymbolPicker: View {
     @Binding var selection: String
+    let defaultSymbol: String
     @State private var isPresented = false
 
     var body: some View {
@@ -9,28 +54,28 @@ struct SymbolPicker: View {
             Button {
                 isPresented.toggle()
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: selection.isEmpty ? "square.dashed" : selection)
+                HStack(spacing: 6) {
+                    Image(systemName: SymbolCatalog.resolved(selection, fallback: defaultSymbol))
                         .frame(width: 18)
-                    Text(selection.isEmpty ? "Choose…" : selection)
-                        .lineLimit(1)
-                        .foregroundStyle(selection.isEmpty ? .secondary : .primary)
+                    Text(selection.isEmpty ? "Default" : "Custom")
+                        .foregroundStyle(.secondary)
                 }
             }
             .buttonStyle(.bordered)
-            .popover(isPresented: $isPresented) {
-                SymbolGrid(selection: $selection, isPresented: $isPresented)
+            .help("Choose an icon")
+            .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+                SymbolGrid(selection: $selection, defaultSymbol: defaultSymbol, isPresented: $isPresented)
             }
 
             if !selection.isEmpty {
                 Button {
                     selection = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
+                    Image(systemName: "arrow.uturn.backward.circle.fill")
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Clear icon")
+                .help("Use the default icon")
             }
         }
     }
@@ -38,17 +83,20 @@ struct SymbolPicker: View {
 
 private struct SymbolGrid: View {
     @Binding var selection: String
+    let defaultSymbol: String
     @Binding var isPresented: Bool
     @State private var search = ""
 
-    private var filtered: [(String, [String])] {
-        if search.isEmpty { return SymbolCatalog.categories }
-        let query = search.lowercased()
-        let results = SymbolCatalog.categories.compactMap { (name, symbols) -> (String, [String])? in
+    private var current: String { selection.isEmpty ? defaultSymbol : selection }
+
+    private var sections: [(String, [String])] {
+        let query = search.trimmingCharacters(in: .whitespaces).lowercased()
+        if query.isEmpty { return [("Default", [defaultSymbol])] + SymbolCatalog.categories }
+        return SymbolCatalog.categories.compactMap { name, symbols in
+            if name.lowercased().contains(query) { return (name, symbols) }
             let matched = symbols.filter { $0.lowercased().contains(query) }
             return matched.isEmpty ? nil : (name, matched)
         }
-        return results
     }
 
     var body: some View {
@@ -56,7 +104,7 @@ private struct SymbolGrid: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search symbols…", text: $search)
+                TextField("Search icons", text: $search)
                     .textFieldStyle(.plain)
             }
             .padding(10)
@@ -65,12 +113,18 @@ private struct SymbolGrid: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(filtered, id: \.0) { category, symbols in
+                    if sections.isEmpty {
+                        Text("No icons match “\(search)”")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 40)
+                    }
+                    ForEach(sections, id: \.0) { category, symbols in
                         Section {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 44))], spacing: 6) {
                                 ForEach(symbols, id: \.self) { symbol in
                                     Button {
-                                        selection = symbol
+                                        selection = symbol == defaultSymbol ? "" : symbol
                                         isPresented = false
                                     } label: {
                                         Image(systemName: symbol)
@@ -78,8 +132,9 @@ private struct SymbolGrid: View {
                                             .frame(width: 40, height: 40)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 6)
-                                                    .fill(selection == symbol ? Color.accentColor.opacity(0.2) : Color.clear)
+                                                    .fill(current == symbol ? Color.accentColor.opacity(0.22) : Color.clear)
                                             )
+                                            .contentShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
                                     .help(symbol)
@@ -96,101 +151,125 @@ private struct SymbolGrid: View {
                 .padding(10)
             }
         }
-        .frame(width: 300, height: 400)
+        .frame(width: 340, height: 420)
     }
 }
 
 enum SymbolCatalog {
-    static let categories: [(String, [String])] = [
+    /// The name if this Mac has that symbol, otherwise the fallback, so a typo
+    /// or a symbol from a newer macOS never shows up as a blank space.
+    static func resolved(_ name: String?, fallback: String) -> String {
+        guard let name, !name.isEmpty, isAvailable(name) else { return fallback }
+        return name
+    }
+
+    static func isAvailable(_ name: String) -> Bool {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil
+    }
+
+    /// Only symbols that exist on the running macOS.
+    static let categories: [(String, [String])] = catalog.compactMap { name, symbols in
+        let available = symbols.filter(isAvailable)
+        return available.isEmpty ? nil : (name, available)
+    }
+
+    // Apple-product symbols (macmini, appletv, airport…) may only stand for those products.
+    private static let catalog: [(String, [String])] = [
+        ("Network", [
+            "network",
+            "wifi.router",
+            "wifi.router.fill",
+            "wifi",
+            "antenna.radiowaves.left.and.right",
+            "dot.radiowaves.left.and.right",
+            "dot.radiowaves.up.forward",
+            "personalhotspot",
+            "point.3.connected.trianglepath.dotted",
+            "point.3.filled.connected.trianglepath.dotted",
+            "point.topleft.down.to.point.bottomright.curvepath",
+            "arrow.triangle.branch",
+            "arrow.triangle.swap",
+            "arrow.left.arrow.right",
+            "arrow.up.arrow.down",
+            "cable.connector",
+            "cable.connector.horizontal",
+            "cable.coaxial",
+            "rectangle.connected.to.line.below",
+            "network.badge.shield.half.filled",
+            "globe",
+            "globe.americas",
+            "link",
+            "bolt.horizontal",
+            "airport.express",
+            "airport.extreme",
+            "airport.extreme.tower",
+        ]),
         ("Servers & Hardware", [
             "server.rack",
+            "xserve",
+            "xserve.raid",
             "cpu",
             "memorychip",
+            "fan",
             "desktopcomputer",
             "pc",
             "laptopcomputer",
             "macmini",
+            "macstudio",
             "macpro.gen3",
             "display",
             "display.2",
             "printer",
             "scanner",
         ]),
-        ("Network", [
-            "network",
-            "globe",
-            "wifi",
-            "antenna.radiowaves.left.and.right",
-            "cable.connector",
-            "link",
-            "bolt.horizontal",
-            "point.3.connected.trianglepath.dotted",
-            "arrow.triangle.branch",
-        ]),
         ("Storage", [
             "externaldrive",
             "externaldrive.fill",
+            "externaldrive.connected.to.line.below",
+            "externaldrive.badge.wifi",
+            "externaldrive.badge.timemachine",
             "internaldrive",
             "internaldrive.fill",
             "opticaldiscdrive",
-            "folder",
-            "folder.fill",
-            "doc",
-            "archivebox",
-            "archivebox.fill",
             "cylinder",
             "cylinder.fill",
+            "cylinder.split.1x2",
+            "folder",
+            "folder.fill",
+            "archivebox",
+            "archivebox.fill",
             "tray.2",
             "tray.full",
             "sdcard",
-            "usbdrive",
-        ]),
-        ("Connectivity", [
-            "cloud",
-            "cloud.fill",
-            "icloud",
-            "arrow.up.arrow.down",
-            "arrow.up.arrow.down.circle",
-            "arrowshape.turn.up.right",
-            "paperplane",
-            "antenna.radiowaves.left.and.right.slash",
-            "wifi.slash",
+            "photo.stack",
         ]),
         ("Security", [
-            "lock",
-            "lock.fill",
             "lock.shield",
-            "key",
-            "key.fill",
+            "lock.shield.fill",
             "shield",
             "shield.fill",
+            "shield.lefthalf.filled",
+            "checkmark.shield",
             "shield.checkered",
+            "lock",
+            "lock.fill",
+            "key",
+            "key.fill",
             "person.badge.key",
+            "web.camera",
+            "video.doorbell",
+            "eye",
         ]),
-        ("Tools", [
-            "terminal",
-            "terminal.fill",
-            "wrench",
-            "wrench.and.screwdriver",
-            "gearshape",
-            "gearshape.2",
-            "hammer",
-            "gauge",
-            "stethoscope",
-            "waveform.path.ecg",
-        ]),
-        ("Apps & Media", [
-            "play",
-            "play.fill",
-            "video",
-            "video.fill",
-            "camera",
-            "photo",
-            "music.note",
-            "headphones",
-            "speaker.wave.3",
-            "tv",
-            "gamecontroller",
+        ("Power", [
+            "bolt",
+            "bolt.fill",
+            "bolt.batteryblock",
+            "battery.100.bolt",
+            "powerplug",
+            "poweroutlet.type.b",
+            "powercord",
+            "ev.charger",
+            "sun.max",
         ]),
         ("Home & IoT", [
             "homekit",
@@ -198,12 +277,17 @@ enum SymbolCatalog {
             "house.fill",
             "lightbulb",
             "lightbulb.fill",
-            "fanblades",
+            "light.recessed",
+            "sensor",
+            "sensor.fill",
             "thermometer.medium",
-            "bolt",
-            "bolt.fill",
-            "powerplug",
-            "ev.charger",
+            "humidity",
+            "fanblades",
+            "air.purifier",
+            "hifispeaker",
+            "tv",
+            "appletv",
+            "homepod",
         ]),
         ("Containers & Services", [
             "shippingbox",
@@ -216,28 +300,58 @@ enum SymbolCatalog {
             "app",
             "square.grid.2x2",
             "rectangle.3.group",
+            "cloud",
+            "cloud.fill",
+            "icloud",
+            "envelope",
+            "bubble.left.and.bubble.right",
+        ]),
+        ("Tools", [
+            "terminal",
+            "terminal.fill",
+            "chevron.left.forwardslash.chevron.right",
+            "wrench",
+            "wrench.and.screwdriver",
+            "gearshape",
+            "gearshape.2",
+            "hammer",
+            "gauge.with.dots.needle.33percent",
+            "chart.bar",
+            "chart.line.uptrend.xyaxis",
+            "waveform.path.ecg",
+            "stethoscope",
+            "doc.text.magnifyingglass",
+            "arrow.clockwise",
+        ]),
+        ("Media", [
+            "play.rectangle",
+            "play.fill",
+            "film",
+            "video",
+            "camera",
+            "photo",
+            "music.note",
+            "headphones",
+            "books.vertical",
+            "newspaper",
+            "gamecontroller",
         ]),
         ("General", [
             "star",
             "star.fill",
             "heart",
-            "heart.fill",
             "flag",
-            "flag.fill",
             "bell",
-            "bell.fill",
             "bookmark",
             "tag",
             "pin",
             "mappin",
-            "chart.bar",
-            "chart.line.uptrend.xyaxis",
             "clock",
             "calendar",
-            "eye",
-            "hand.raised",
             "person",
             "person.2",
+            "building.2",
+            "briefcase",
         ]),
     ]
 }

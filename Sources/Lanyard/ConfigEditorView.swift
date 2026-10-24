@@ -58,7 +58,7 @@ struct ConfigEditorView: View {
                 List(selection: $selection) {
                     ForEach(items) { item in
                         HStack(spacing: 8) {
-                            Image(systemName: item.isDivider ? "minus" : (item.icon.isEmpty ? "server.rack" : item.icon))
+                            Image(systemName: item.isDivider ? "minus" : SymbolCatalog.resolved(item.icon, fallback: "server.rack"))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 16)
                             Text(item.listTitle)
@@ -281,11 +281,25 @@ struct ServerEditor: View {
     var body: some View {
         Form {
             Section {
-                TextField("Name", text: $item.name, prompt: Text("NAS"))
-                TextField("Host", text: $item.host, prompt: Text("nas.local"))
-                LabeledContent("Icon") {
-                    SymbolPicker(selection: $item.icon)
+                HStack(spacing: 14) {
+                    SymbolWell(selection: $item.icon, defaultSymbol: "server.rack")
+                    Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
+                        GridRow {
+                            Text("Name")
+                                .foregroundStyle(.secondary)
+                                .gridColumnAlignment(.trailing)
+                            TextField("Name", text: $item.name, prompt: Text("NAS"))
+                        }
+                        GridRow {
+                            Text("Host")
+                                .foregroundStyle(.secondary)
+                            TextField("Host", text: $item.host, prompt: Text("nas.local"))
+                        }
+                    }
+                    .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
                 }
+                .padding(.vertical, 4)
             }
 
             Section("Services") {
@@ -339,7 +353,7 @@ struct ServiceEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: service.icon.isEmpty ? service.kind.defaultSymbol : service.icon)
+                Image(systemName: SymbolCatalog.resolved(service.icon, fallback: service.kind.defaultSymbol))
                     .frame(width: 18)
                 Picker("Type", selection: $service.kind) {
                     ForEach(ServiceKind.allCases, id: \.self) { kind in
@@ -389,9 +403,7 @@ struct ServiceEditor: View {
                     }
                     HStack {
                         TextField("Label", text: $service.label, prompt: Text("Label"))
-                        LabeledContent("Icon") {
-                            SymbolPicker(selection: $service.icon)
-                        }
+                        SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
                     }
                     .labelsHidden()
                 }

@@ -38,7 +38,7 @@ struct ServerRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: server.icon ?? "server.rack")
+            Image(systemName: SymbolCatalog.resolved(server.icon, fallback: "server.rack"))
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
 

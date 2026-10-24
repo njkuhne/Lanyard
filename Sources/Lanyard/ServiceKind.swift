@@ -46,7 +46,7 @@ enum ServiceKind: String, CaseIterable {
 }
 
 extension Service {
-    var symbol: String { icon ?? kind.defaultSymbol }
+    var symbol: String { SymbolCatalog.resolved(icon, fallback: kind.defaultSymbol) }
     var title: String { label ?? kind.displayName }
 
     /// The URL handed to macOS, which routes each scheme to the right app:

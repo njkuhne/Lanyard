@@ -47,7 +47,7 @@ enum EditorModel {
                             user: s.user ?? "",
                             https: s.https ?? false,
                             label: s.label ?? "",
-                            icon: s.icon ?? "",
+                            icon: s.icon == s.kind.defaultSymbol ? "" : (s.icon ?? ""),
                             url: s.url ?? ""
                         )
                     }
