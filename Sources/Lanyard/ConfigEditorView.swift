@@ -361,7 +361,7 @@ struct ServiceEditor: View {
                         }
                         optionRow("Open URL") {
                             TextField("Open URL", text: $service.url,
-                                      prompt: Text("Optional, handed to the app, e.g. myapp://{address}"))
+                                      prompt: Text("Optional, handed to the app, e.g. myapp://nas.local"))
                         }
                     } else {
                         optionRow("Address") {

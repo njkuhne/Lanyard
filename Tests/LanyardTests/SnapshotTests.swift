@@ -63,7 +63,7 @@ final class SnapshotTests: XCTestCase {
       - name: The Extremely Long Named Proxmox Cluster Node
         address: pve-node-01.homelab.internal.example.com
         services:
-    """ + (1...15).map { "\n          - web: { url: \"http://{address}:\(8000 + $0)\", name: App \($0), badge: A\($0) }" }.joined() + """
+    """ + (1...15).map { "\n          - web: { url: \"http://pve-node-01.homelab.internal.example.com:\(8000 + $0)\", name: App \($0), badge: A\($0) }" }.joined() + """
 
       - name: Router
         address: 192.168.1.1
@@ -111,8 +111,8 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testServiceOptionsExpanded() {
-        let web = EditorService(kind: .web, label: "Grafana", url: "http://{address}:3000", badge: "GF")
-        let ssh = EditorService(kind: .ssh, url: "ssh://admin@{address}")
+        let web = EditorService(kind: .web, label: "Grafana", url: "http://docker.local:3000", badge: "GF")
+        let ssh = EditorService(kind: .ssh, url: "ssh://admin@docker.local")
         let form = Form {
             Section("Services") {
                 ServiceEditor(service: .constant(web), serverAddress: "docker.local", startExpanded: true) {}

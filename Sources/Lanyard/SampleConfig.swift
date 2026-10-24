@@ -14,7 +14,6 @@ enum SampleConfig {
 #   - smb
 #   - app: com.microsoft.rdc.macos      (launches a Mac app)
 # Options: name, url, and either icon (any SF Symbol) or badge (1–3 characters).
-# {address} in a url is the server's address.
 # Per server: show_address: false and show_icon: false tidy up the menu.
 
 servers: []

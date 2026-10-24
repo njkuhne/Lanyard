@@ -41,9 +41,9 @@ servers:
   - name: Docker host
     address: docker.local
     services:
-      - web: { url: "https://{address}:9443", name: Portainer, badge: PT }
-      - web: { url: "http://{address}:3000", name: Grafana, badge: GF }
-      - ssh: ssh://admin@{address}
+      - web: { url: "https://docker.local:9443", name: Portainer, badge: PT }
+      - web: { url: "http://docker.local:3000", name: Grafana, badge: GF }
+      - ssh: ssh://admin@docker.local
 
   - divider: Remote
 
@@ -57,8 +57,8 @@ servers:
 - **Servers** have a `name`, an `address`, an optional `icon` (any SF Symbol),
   and `show_address: false` / `show_icon: false` to tidy the menu.
 - **Services** are a type and one address: `- web: https://nas.local:5001/admin`,
-  `- ssh: ssh://root@{address}:2222`. Leave the address out (`- smb`) to use the
-  server's. `{address}` stands for the server's address.
+  `- ssh: ssh://root@nas.local:2222`. Leave the address out (`- smb`) to use the
+  server's.
 - Give a service a `name` (tooltips and menus) and either an `icon` or a `badge`
   of 1–3 characters, which is handy when a box runs several web apps.
 - `- divider` adds a line, `- divider: Title` a labelled section. Order in the

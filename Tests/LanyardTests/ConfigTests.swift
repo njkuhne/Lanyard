@@ -79,13 +79,13 @@ final class ConfigParserTests: XCTestCase {
         XCTAssertNotNil(parseError(yaml))
         let services = try servers(yaml.replacingOccurrences(of: "      - { name: A, 1: b }", with: ""))[0].services
         XCTAssertEqual(services.map(\.url), [
-            "smb://{address}/share",
-            "smb://{address}/photos",
+            "smb://a/share",
+            "smb://a/photos",
             "https://a.lan/x",
-            "http://{address}",
-            "https://{address}",
-            "https://{address}:8443",
-            "https://nick@{address}",
+            "http://a",
+            "https://a",
+            "https://a:8443",
+            "https://nick@a",
             nil,
         ])
         XCTAssertEqual(services[3].label, "Admin")
@@ -126,9 +126,9 @@ final class ServiceKindTests: XCTestCase {
 
     func testAddressesAreUsedAsWritten() {
         XCTAssertEqual(url(.web, "http://grafana.lan:3000/d/home"), "http://grafana.lan:3000/d/home")
-        XCTAssertEqual(url(.ssh, "ssh://root@{address}:2222"), "ssh://root@box.lan:2222")
+        XCTAssertEqual(url(.ssh, "ssh://root@other.lan:2222"), "ssh://root@other.lan:2222")
         XCTAssertEqual(url(.web, "nas.lan:5001"), "https://nas.lan:5001", "no scheme gets the type's own")
-        XCTAssertEqual(url(.smb, "{host}/photos"), "smb://box.lan/photos")
+        XCTAssertEqual(url(.smb, "box.lan/photos"), "smb://box.lan/photos")
     }
 
     func testNamesPortsAndFields() {
@@ -261,7 +261,7 @@ final class EditorModelTests: XCTestCase {
     func testSummary() {
         XCTAssertEqual(EditorService(kind: .web, label: "Portainer", url: "https://nas:9443").summary, "Portainer · https://nas:9443")
         XCTAssertEqual(EditorService(kind: .ssh).summary, "")
-        XCTAssertEqual(EditorService(kind: .web, label: "Admin", url: "https://{address}/x").summary, "Admin · https://{address}/x")
+        XCTAssertEqual(EditorService(kind: .web, label: "Admin", url: "https://a.lan/x").summary, "Admin · https://a.lan/x")
     }
 
     func testYAMLWriterCoversEveryShape() throws {
@@ -269,7 +269,7 @@ final class EditorModelTests: XCTestCase {
             EditorItem(isDivider: true),
             EditorItem(isDivider: true, name: "Remote"),
             EditorItem(name: "", host: "a.lan", icon: "cpu", services: [
-                EditorService(kind: .ssh, icon: "terminal.fill", url: "ssh://root@{address}:2222"),
+                EditorService(kind: .ssh, icon: "terminal.fill", url: "ssh://root@a.lan:2222"),
                 EditorService(kind: .web, url: "https://a.lan:5001"),
                 EditorService(kind: .web, label: "yes", badge: "Y"),
             ]),
@@ -278,7 +278,7 @@ final class EditorModelTests: XCTestCase {
         XCTAssertTrue(yaml.contains("  - divider\n"))
         XCTAssertTrue(yaml.contains("  - divider: Remote\n"))
         XCTAssertTrue(yaml.contains("  - name: a.lan\n    address: a.lan\n    icon: cpu\n"))
-        XCTAssertTrue(yaml.contains("- ssh: { url: \"ssh://root@{address}:2222\", icon: terminal.fill }"))
+        XCTAssertTrue(yaml.contains("- ssh: { url: \"ssh://root@a.lan:2222\", icon: terminal.fill }"))
         XCTAssertTrue(yaml.contains("- web: \"https://a.lan:5001\"\n"), "a lone address is written on one line")
         XCTAssertTrue(yaml.contains("- web: { name: \"yes\", badge: \"Y\" }"), "reserved words are quoted")
         XCTAssertEqual(EditorModel.yaml(from: []), "# Lanyard config\nservers:\n  []\n")
@@ -397,7 +397,7 @@ final class AppServiceTests: XCTestCase {
         XCTAssertEqual(short.bundle, "com.microsoft.rdc.macos")
         XCTAssertNil(short.url(for: server), "no URL: the app is just launched")
 
-        let long = try service("launch: { bundle: com.example.App, url: \"example://{address}\", name: Example }")
+        let long = try service("launch: { bundle: com.example.App, url: \"example://pc.lan\", name: Example }")
         XCTAssertEqual(long.bundle, "com.example.App")
         XCTAssertEqual(long.url(for: server)?.absoluteString, "example://pc.lan")
         XCTAssertEqual(long.title, "Example")

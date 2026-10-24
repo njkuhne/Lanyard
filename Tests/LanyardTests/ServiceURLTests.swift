@@ -35,7 +35,7 @@ final class ServiceURLTests: XCTestCase {
             return nil
         }
         XCTAssertEqual(hosts, ["a.lan", "b.lan"])
-        XCTAssertEqual(try url("web: { url: \"https://{address}:9443\" }"), "https://box.lan:9443")
+        XCTAssertEqual(try url("web: { url: \"https://{address}:9443\" }"), nil, "placeholders aren't filled in")
     }
 
     func testUserGoesIntoSSHURL() throws {
@@ -43,27 +43,27 @@ final class ServiceURLTests: XCTestCase {
     }
 
     func testCustomTemplateFillsHost() throws {
-        XCTAssertEqual(try url("custom: { url: \"https://{host}:9443\" }"), "https://box.lan:9443")
+        XCTAssertEqual(try url("custom: { url: \"https://box.lan:9443\" }"), "https://box.lan:9443")
     }
 
     func testLinkAndCustomAreAliasesForWeb() throws {
-        XCTAssertEqual(try url("link: { url: \"ftp://{host}/pub\" }"), "ftp://box.lan/pub")
+        XCTAssertEqual(try url("link: { url: \"ftp://box.lan/pub\" }"), "ftp://box.lan/pub")
     }
 
     func testWebURLReplacesPortPathAndHTTPSRule() throws {
-        XCTAssertEqual(try url("web: { url: \"http://{host}:9443/admin\", port: 8123 }"), "http://box.lan:9443/admin")
+        XCTAssertEqual(try url("web: { url: \"http://box.lan:9443/admin\", port: 8123 }"), "http://box.lan:9443/admin")
     }
 
     func testEditorWritesWebURLWithoutPortOrHTTPS() throws {
-        let config = try ConfigParser.parse("servers:\n  - name: Box\n    host: box.lan\n    services:\n      - custom: { url: \"https://{host}:9443\", label: Portainer }\n")
+        let config = try ConfigParser.parse("servers:\n  - name: Box\n    host: box.lan\n    services:\n      - custom: { url: \"https://box.lan:9443\", label: Portainer }\n")
         let yaml = EditorModel.yaml(from: EditorModel.items(from: config))
-        XCTAssertTrue(yaml.contains("- web: { url: \"https://{host}:9443\", name: Portainer }"), yaml)
+        XCTAssertTrue(yaml.contains("- web: { url: \"https://box.lan:9443\", name: Portainer }"), yaml)
     }
 
     func testOldConfigsAreFoldedIntoOneAddress() throws {
         let config = try ConfigParser.parse("servers:\n  - name: Box\n    host: box.lan\n    services:\n      - web: 8123\n      - web: { port: 8123, https: true }\n")
         let yaml = EditorModel.yaml(from: EditorModel.items(from: config))
-        XCTAssertTrue(yaml.contains("- web: \"http://{address}:8123\""), yaml)
-        XCTAssertTrue(yaml.contains("- web: \"https://{address}:8123\""), yaml)
+        XCTAssertTrue(yaml.contains("- web: \"http://box.lan:8123\""), yaml)
+        XCTAssertTrue(yaml.contains("- web: \"https://box.lan:8123\""), yaml)
     }
 }

@@ -47,7 +47,7 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "vnc://user@mac.local"
         case .ssh: return "ssh://user@nas.local:22"
         case .sftp: return "sftp://user@nas.local"
-        case .app: return "Optional, e.g. myapp://{address}"
+        case .app: return "Optional, e.g. myapp://nas.local"
         }
     }
 
@@ -83,14 +83,11 @@ extension Service {
 
     /// The URL handed to macOS (or, for an app service, to that app), which routes
     /// each scheme to the right app: http(s) → browser, smb/nfs → Finder,
-    /// vnc → Screen Sharing, ssh → Terminal. `{address}` is the server's address,
-    /// and an address with no scheme gets the type's own (https for web).
+    /// vnc → Screen Sharing, ssh → Terminal. The address is used as written; with
+    /// none, the server's own address opens, and a bare host gets the type's scheme.
     func url(for server: Server) -> URL? {
         let custom = url?.trimmingCharacters(in: .whitespaces) ?? ""
-        guard let template = custom.isEmpty ? kind.scheme.map({ "\($0)://{address}" }) : custom else { return nil }
-        var text = template
-            .replacingOccurrences(of: "{address}", with: server.host)
-            .replacingOccurrences(of: "{host}", with: server.host)
+        guard var text = custom.isEmpty ? kind.scheme.map({ "\($0)://\(server.host)" }) : custom else { return nil }
         if !text.contains("://"), let scheme = kind.scheme { text = "\(scheme)://\(text)" }
         return URL(string: text)
     }

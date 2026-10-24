@@ -93,7 +93,8 @@ Three kinds of code, held to different bars:
   validates before every save, keeps the last good config if the file is broken.
 - `ConfigParser.swift` — YAML → model via Yams, with human-readable errors.
   Each service is a type plus one address (`- web: https://nas.local:5001`,
-  `- ssh: ssh://admin@{address}:2222`, bare `- smb` uses the server's address),
+  `- ssh: ssh://admin@nas.local:2222`, bare `- smb` uses the server's address;
+  addresses are used as written, with no placeholders),
   a name, and either an icon or a 1–3 character badge. Older configs with
   port/path/user/https still load and are folded into the URL; `custom`/`link`
   are aliases for web; `host:` is the old name for `address:`. Servers can set

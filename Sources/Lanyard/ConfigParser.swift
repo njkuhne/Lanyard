@@ -79,7 +79,7 @@ enum ConfigParser {
                     throw ConfigError("\(name): `services:` should be a list")
                 }
                 for rawService in rawServices {
-                    services.append(try parseService(rawService, server: name, nextID: nextID))
+                    services.append(try parseService(rawService, server: name, host: host, nextID: nextID))
                 }
             }
 
@@ -99,10 +99,10 @@ enum ConfigParser {
     /// Services can be written as:
     ///   - ssh                                   (opens the server's address)
     ///   - web: https://nas.local:5001/admin     (where it opens)
-    ///   - ssh: { url: "ssh://admin@{address}:2222", name: Shell, badge: SH }
+    ///   - ssh: { url: "ssh://admin@nas.local:2222", name: Shell, badge: SH }
     ///   - app: com.microsoft.rdc.macos
     /// Older configs with port/path/user/https still load; they're folded into the URL.
-    private static func parseService(_ item: Any, server: String, nextID: () -> Int) throws -> Service {
+    private static func parseService(_ item: Any, server: String, host: String, nextID: () -> Int) throws -> Service {
         let typeName: String
         var options: [String: Any] = [:]
 
@@ -152,7 +152,7 @@ enum ConfigParser {
             kind: kind,
             label: string(options["name"]) ?? string(options["label"]),
             icon: string(options["icon"]),
-            url: string(options["url"]) ?? legacyURL(kind: kind, typeName: typeName, options: options),
+            url: string(options["url"]) ?? legacyURL(kind: kind, typeName: typeName, host: host, options: options),
             badge: badge,
             bundle: bundle
         )
@@ -161,7 +161,7 @@ enum ConfigParser {
 
     /// Older configs spelled out port, path, user and https; fold them into one URL.
     /// HTTPS was assumed on 443 and common TLS ports, HTTP on any other port.
-    private static func legacyURL(kind: ServiceKind, typeName: String, options: [String: Any]) -> String? {
+    private static func legacyURL(kind: ServiceKind, typeName: String, host: String, options: [String: Any]) -> String? {
         guard let scheme = kind.scheme else { return nil }
         let port = int(options["port"])
         let path = string(options["path"])
@@ -174,7 +174,7 @@ enum ConfigParser {
         var text = kind == .web ? ((https ?? port.map(tlsPorts.contains) ?? true) ? "https" : "http") : scheme
         text += "://"
         if let user, !user.isEmpty { text += "\(user)@" }
-        text += "{address}"
+        text += host
         if let port { text += ":\(port)" }
         if let path, !path.isEmpty { text += path.hasPrefix("/") ? path : "/" + path }
         return text
