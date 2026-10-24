@@ -60,10 +60,10 @@ final class ServiceURLTests: XCTestCase {
         XCTAssertTrue(yaml.contains("- web: { url: \"https://{host}:9443\", name: Portainer }"), yaml)
     }
 
-    func testEditorRoundTripKeepsImplicitHTTPSOutOfYAML() throws {
+    func testOldConfigsAreFoldedIntoOneAddress() throws {
         let config = try ConfigParser.parse("servers:\n  - name: Box\n    host: box.lan\n    services:\n      - web: 8123\n      - web: { port: 8123, https: true }\n")
         let yaml = EditorModel.yaml(from: EditorModel.items(from: config))
-        XCTAssertTrue(yaml.contains("- web: { port: 8123 }"), yaml)
-        XCTAssertTrue(yaml.contains("- web: { port: 8123, https: true }"), yaml)
+        XCTAssertTrue(yaml.contains("- web: \"http://{address}:8123\""), yaml)
+        XCTAssertTrue(yaml.contains("- web: \"https://{address}:8123\""), yaml)
     }
 }

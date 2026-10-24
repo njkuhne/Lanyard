@@ -75,15 +75,17 @@ Three kinds of code, held to different bars:
   Creates a sample on first launch, watches the file and reloads on change,
   validates before every save, keeps the last good config if the file is broken.
 - `ConfigParser.swift` — YAML → model via Yams, with human-readable errors.
-  Services accept several shorthand forms (`- ssh`, `- web: 8080`,
-  `- web: { port: 5001, https: true }`, `- web: { url: "…{address}…" }`;
-  `custom`/`link` are accepted as aliases for web). A server's `address:` was
-  once `host:`, which still loads; `{host}` still works in URL templates.
+  Each service is a type plus one address (`- web: https://nas.local:5001`,
+  `- ssh: ssh://admin@{address}:2222`, bare `- smb` uses the server's address),
+  a name, and either an icon or a 1–3 character badge. Older configs with
+  port/path/user/https still load and are folded into the URL; `custom`/`link`
+  are aliases for web; `host:` is the old name for `address:`. Servers can set
+  `show_address: false` / `show_icon: false`.
 - `Model.swift`, `ServiceKind.swift` — model; each service turns into a URL
-  (`http(s)`, `smb`, `nfs`, `vnc`, `ssh`, `sftp`, or a web `url:` template) that is
-  handed to `NSWorkspace.open`, which routes it to the right app.
+  handed to `NSWorkspace.open`, which routes it to the right app. An `app`
+  service launches a Mac app by bundle ID instead.
 - `MenuContentView.swift` — the dropdown: server rows, service icon buttons,
-  dividers, error banner, footer with Edit Servers… and a gear menu (Edit YAML…).
+  dividers, error banner, and a gear menu (Edit Servers…, Edit YAML…, Launch at Login, About, Quit).
 - `ConfigEditorView.swift` + `EditorState` — the Edit Servers window (form,
   drag to reorder, servers, dividers, services). Saving writes YAML with
   `EditorModel.yaml(from:)`, which drops comments, so it asks first.

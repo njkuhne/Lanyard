@@ -24,6 +24,8 @@ struct Server: Identifiable {
     var host: String
     var icon: String?
     var services: [Service]
+    var showAddress = true
+    var showIcon = true
 }
 
 struct Service: Identifiable {
@@ -31,10 +33,7 @@ struct Service: Identifiable {
     var kind: ServiceKind
     var label: String?
     var icon: String?
-    var port: Int?
-    var path: String?
-    var user: String?
-    var https: Bool?
+    /// Where it opens, e.g. `ssh://admin@nas.local:2222`. Empty means the server's address.
     var url: String?
     var badge: String?  // 1–3 characters shown instead of the icon
     var bundle: String?  // the app an `app` service launches, by bundle identifier

@@ -182,6 +182,14 @@ struct ServerEditor: View {
                     .labelsHidden()
                 }
                 .padding(.vertical, 4)
+
+                HStack(spacing: 16) {
+                    Text("In the menu")
+                        .foregroundStyle(.secondary)
+                    Toggle("Show address", isOn: $item.showAddress)
+                    Toggle("Show icon", isOn: $item.showIcon)
+                }
+                .toggleStyle(.checkbox)
             }
 
             Section {
@@ -190,7 +198,7 @@ struct ServerEditor: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(item.services) { service in
-                    ServiceEditor(service: binding(for: service), badgeClash: item.badgeClash(for: service)?.title) {
+                    ServiceEditor(service: binding(for: service), serverAddress: item.host, badgeClash: item.badgeClash(for: service)?.title) {
                         item.services.removeAll { $0.id == service.id }
                     }
                 }
@@ -269,12 +277,20 @@ struct AddServiceTile: View {
 struct ServiceEditor: View {
     @Binding var service: EditorService
     var badgeClash: String?
+    var serverAddress = ""
     var onDelete: () -> Void
     @State private var showOptions: Bool
     @State private var useBadge: Bool
 
-    init(service: Binding<EditorService>, badgeClash: String? = nil, startExpanded: Bool = false, onDelete: @escaping () -> Void) {
+    init(
+        service: Binding<EditorService>,
+        serverAddress: String = "",
+        badgeClash: String? = nil,
+        startExpanded: Bool = false,
+        onDelete: @escaping () -> Void
+    ) {
         _service = service
+        self.serverAddress = serverAddress
         self.badgeClash = badgeClash
         // A new app service starts open so its app can be chosen.
         _showOptions = State(initialValue: startExpanded || (service.wrappedValue.kind == .app && service.wrappedValue.bundle.isEmpty))
@@ -282,6 +298,13 @@ struct ServiceEditor: View {
         self.onDelete = onDelete
     }
 
+
+    /// Empty means the server's own address, so show what that would open.
+    private var addressPrompt: String {
+        let host = serverAddress.trimmingCharacters(in: .whitespaces)
+        guard let scheme = service.kind.scheme, !host.isEmpty else { return service.kind.example }
+        return "\(scheme)://\(host)  (e.g. \(service.kind.example))"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -340,28 +363,8 @@ struct ServiceEditor: View {
                                       prompt: Text("Optional, handed to the app, e.g. myapp://{address}"))
                         }
                     } else {
-                        optionRow("Port") {
-                            TextField("Port", text: $service.port,
-                                      prompt: Text(service.kind.defaultPort.map(String.init) ?? ""))
-                                .frame(width: 90)
-                                .disabled(service.hasURL)
-                        }
-                    }
-                    if service.kind.usesPath {
-                        optionRow("Path") {
-                            TextField("Path", text: $service.path, prompt: Text("Optional"))
-                                .disabled(service.hasURL)
-                        }
-                    }
-                    if service.kind == .web {
-                        optionRow("Full URL") {
-                            TextField("Full URL", text: $service.url,
-                                      prompt: Text("Optional, replaces port and path, e.g. https://{address}:9443/admin"))
-                        }
-                    }
-                    if service.kind.usesUser {
-                        optionRow("User") {
-                            TextField("User", text: $service.user, prompt: Text("Optional"))
+                        optionRow("Address") {
+                            TextField("Address", text: $service.url, prompt: Text(addressPrompt))
                         }
                     }
                     optionRow("Name") {
@@ -394,13 +397,6 @@ struct ServiceEditor: View {
                     } else {
                         optionRow("Icon") {
                             SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
-                        }
-                    }
-                    if service.kind == .web {
-                        optionRow("HTTPS") {
-                            Toggle("Use HTTPS", isOn: $service.usesHTTPS)
-                                .toggleStyle(.checkbox)
-                                .disabled(service.hasURL)
                         }
                     }
                 }
@@ -506,11 +502,12 @@ struct AddServerView: View {
             if state.kinds.contains(.web) {
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
                     GridRow {
-                        Text("Web port").foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                        Text("Web address").foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                        TextField("Web address", text: $state.webAddress, prompt: Text(state.webPrompt))
+                    }
+                    GridRow {
+                        Text("Web name").foregroundStyle(.secondary)
                         HStack {
-                            TextField("Web port", text: $state.webPort, prompt: Text("443"))
-                                .frame(width: 80)
-                            Text("Name").foregroundStyle(.secondary)
                             TextField("Web name", text: $state.webName, prompt: Text("Optional"))
                             Text("Badge").foregroundStyle(.secondary)
                             TextField("Badge", text: $state.webBadge, prompt: Text("1–3"))

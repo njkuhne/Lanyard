@@ -8,13 +8,14 @@ enum SampleConfig {
 # the order in the menu. Use `- divider` or `- divider: Title` to group them.
 #
 # Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, app
-# An app service launches a Mac app: `- app: com.microsoft.rdc.macos`
-# Service options: port, path, user, https, name, url, and either icon (any SF
-# Symbol) or badge (1–3 characters) to show in the menu
-# Web uses HTTPS on 443 and common TLS ports (5001, 8006, 8443, 9443), HTTP on
-# any other port. Add `https: true` or `https: false` to say otherwise.
-# Give web a full `url` for anything else (another scheme, path or host);
-# {address}, {user} and {port} are filled in for you.
+# Each service opens one address; leave it out to use the server's address:
+#   - web: https://nas.local:5001/admin
+#   - ssh: ssh://admin@nas.local:2222
+#   - smb
+#   - app: com.microsoft.rdc.macos      (launches a Mac app)
+# Options: name, url, and either icon (any SF Symbol) or badge (1–3 characters).
+# {address} in a url is the server's address.
+# Per server: show_address: false and show_icon: false tidy up the menu.
 
 servers: []
 

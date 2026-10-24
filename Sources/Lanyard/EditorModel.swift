@@ -4,10 +4,6 @@ import Foundation
 struct EditorService: Identifiable, Equatable {
     var id = UUID()
     var kind: ServiceKind = .web
-    var port = ""
-    var path = ""
-    var user = ""
-    var https: Bool?  // nil follows the port: HTTPS on 443 and common TLS ports
     var label = ""
     var icon = ""
     var url = ""
@@ -33,26 +29,13 @@ extension EditorService {
         return name.isEmpty ? kind.displayName : name
     }
 
-    var hasURL: Bool { !url.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    /// What the HTTPS checkbox shows. Matching the port's default clears the
-    /// override, so the YAML only says `https:` when it differs from the default.
-    var usesHTTPS: Bool {
-        get { https ?? ServiceKind.impliesHTTPS(port: Int(port)) }
-        set { https = newValue == ServiceKind.impliesHTTPS(port: Int(port)) ? nil : newValue }
-    }
-
     /// What a collapsed row shows, so services of the same type can be told apart.
     var summary: String {
         let trimmed = { (s: String) in s.trimmingCharacters(in: .whitespaces) }
         var parts: [String] = []
         if !trimmed(label).isEmpty { parts.append(trimmed(label)) }
         if kind == .app, !trimmed(bundle).isEmpty { parts.append(trimmed(bundle)) }
-        if hasURL { return (parts + [trimmed(url)]).joined(separator: " · ") }
-        if !trimmed(user).isEmpty { parts.append(trimmed(user)) }
-        if !trimmed(port).isEmpty { parts.append(":" + trimmed(port)) }
-        if kind.usesPath, !trimmed(path).isEmpty { parts.append(trimmed(path)) }
-        if kind == .web, let https { parts.append(https ? "HTTPS" : "HTTP") }
+        if !trimmed(url).isEmpty { parts.append(trimmed(url)) }
         return parts.joined(separator: " · ")
     }
 }
@@ -64,6 +47,8 @@ struct EditorItem: Identifiable, Equatable {
     var host = ""
     var icon = ""
     var services: [EditorService] = []
+    var showAddress = true
+    var showIcon = true
 
     var listTitle: String {
         if isDivider { return name.isEmpty ? "Divider" : name }
@@ -92,17 +77,15 @@ enum EditorModel {
                     services: server.services.map { s in
                         EditorService(
                             kind: s.kind,
-                            port: s.port.map { String($0) } ?? "",
-                            path: s.path ?? "",
-                            user: s.user ?? "",
-                            https: s.https == ServiceKind.impliesHTTPS(port: s.port) ? nil : s.https,
                             label: s.label ?? "",
                             icon: s.icon == s.kind.defaultSymbol ? "" : (s.icon ?? ""),
                             url: s.url ?? "",
                             badge: s.badge ?? "",
                             bundle: s.bundle ?? ""
                         )
-                    }
+                    },
+                    showAddress: server.showAddress,
+                    showIcon: server.showIcon
                 )
             }
         }
@@ -125,6 +108,8 @@ enum EditorModel {
         var out = "  - name: \(quote(name.isEmpty ? host : name))\n"
         out += "    address: \(quote(host))\n"
         if !item.icon.isEmpty { out += "    icon: \(quote(item.icon))\n" }
+        if !item.showAddress { out += "    show_address: false\n" }
+        if !item.showIcon { out += "    show_icon: false\n" }
         if !item.services.isEmpty {
             out += "    services:\n"
             for service in item.services {
@@ -154,20 +139,16 @@ enum EditorModel {
             guard !v.isEmpty else { return }
             options.append("\(key): \(Int(v) != nil ? v : quote(v))")
         }
-        let hasURL = !s.url.trimmingCharacters(in: .whitespaces).isEmpty
         add("bundle", s.bundle)
         add("url", s.url)
-        if !hasURL {
-            add("port", s.port)
-            add("path", s.path)
-        }
-        add("user", s.user)
-        if !hasURL {
-            if s.kind == .web, let https = s.https { options.append("https: \(https)") }
-        }
         add("name", s.label)
         add("badge", s.badge)
         add("icon", s.icon)
+        // A lone address or app reads best on one line: `- web: https://…`.
+        if options.count == 1, let only = options.first, only.hasPrefix("url:") || only.hasPrefix("bundle:"),
+           let colon = only.firstIndex(of: ":") {
+            return "\(s.kind.rawValue):\(only[only.index(after: colon)...])"
+        }
         return options.isEmpty ? s.kind.rawValue : "\(s.kind.rawValue): { \(options.joined(separator: ", ")) }"
     }
 

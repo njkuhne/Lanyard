@@ -88,19 +88,20 @@ enum ConfigParser {
                 name: name,
                 host: host,
                 icon: string(fields["icon"]),
-                services: services
+                services: services,
+                showAddress: bool(fields["show_address"]) ?? true,
+                showIcon: bool(fields["show_icon"]) ?? true
             )))
         }
         return LanyardConfig(entries: entries)
     }
 
     /// Services can be written as:
-    ///   - ssh
-    ///   - web: 8080                       (port)
-    ///   - smb: /photos                    (path)
-    ///   - web: https://nas.local:5001     (full URL)
-    ///   - web: { port: 8080, https: true }    (HTTPS is assumed only on 443 and common TLS ports)
-    ///   - web: { url: "https://{address}:9443/admin", icon: shippingbox, name: Portainer, badge: PT }
+    ///   - ssh                                   (opens the server's address)
+    ///   - web: https://nas.local:5001/admin     (where it opens)
+    ///   - ssh: { url: "ssh://admin@{address}:2222", name: Shell, badge: SH }
+    ///   - app: com.microsoft.rdc.macos
+    /// Older configs with port/path/user/https still load; they're folded into the URL.
     private static func parseService(_ item: Any, server: String, nextID: () -> Int) throws -> Service {
         let typeName: String
         var options: [String: Any] = [:]
@@ -118,7 +119,7 @@ enum ConfigParser {
                 } else if let port = entry.value as? Int {
                     options["port"] = port
                 } else if let text = entry.value as? String {
-                    options[text.contains("://") ? "url" : "path"] = text
+                    options[text.hasPrefix("/") ? "path" : "url"] = text
                 }
             } else {
                 throw ConfigError("\(server): each service needs a type, like `- ssh` or `- web: { port: 8080 }`")
@@ -132,17 +133,8 @@ enum ConfigParser {
             throw ConfigError("\(server): unknown service “\(typeName)”. Known types: \(known)")
         }
 
-        var https = bool(options["https"]) ?? bool(options["secure"])
-        if https == nil {
-            switch typeName.lowercased() {
-            case "http": https = false
-            case "https": https = true
-            default: break
-            }
-        }
-
-        // `- app: com.example.App` arrives as a path; `app: { bundle: … }` is the long form.
-        let bundle = kind == .app ? string(options["bundle"]) ?? string(options["path"]) : nil
+        // `- app: com.example.App` arrives as a url; `app: { bundle: … }` is the long form.
+        let bundle = kind == .app ? string(options["bundle"]) ?? string(options.removeValue(forKey: "url")) : nil
         if kind == .app && bundle == nil {
             throw ConfigError("\(server): an `app` service needs an app, like `- app: com.microsoft.rdc.macos`")
         }
@@ -160,15 +152,32 @@ enum ConfigParser {
             kind: kind,
             label: string(options["name"]) ?? string(options["label"]),
             icon: string(options["icon"]),
-            port: int(options["port"]),
-            path: kind == .app ? nil : string(options["path"]),
-            user: string(options["user"]),
-            https: https,
-            url: string(options["url"]),
+            url: string(options["url"]) ?? legacyURL(kind: kind, typeName: typeName, options: options),
             badge: badge,
             bundle: bundle
         )
         return service
+    }
+
+    /// Older configs spelled out port, path, user and https; fold them into one URL.
+    /// HTTPS was assumed on 443 and common TLS ports, HTTP on any other port.
+    private static func legacyURL(kind: ServiceKind, typeName: String, options: [String: Any]) -> String? {
+        guard let scheme = kind.scheme else { return nil }
+        let port = int(options["port"])
+        let path = string(options["path"])
+        let user = string(options["user"])
+        var https = bool(options["https"]) ?? bool(options["secure"])
+        if typeName.lowercased() == "http" { https = https ?? false }
+        guard port != nil || path != nil || user != nil || https != nil else { return nil }
+
+        let tlsPorts: Set<Int> = [443, 5001, 8006, 8443, 9443, 10443, 11443]
+        var text = kind == .web ? ((https ?? port.map(tlsPorts.contains) ?? true) ? "https" : "http") : scheme
+        text += "://"
+        if let user, !user.isEmpty { text += "\(user)@" }
+        text += "{address}"
+        if let port { text += ":\(port)" }
+        if let path, !path.isEmpty { text += path.hasPrefix("/") ? path : "/" + path }
+        return text
     }
 
     // MARK: - Loose value helpers

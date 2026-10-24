@@ -29,8 +29,27 @@ enum ServiceKind: String, CaseIterable {
         }
     }
 
-    var usesPath: Bool { [.web, .smb, .nfs, .sftp].contains(self) }
-    var usesUser: Bool { [.smb, .vnc, .ssh, .sftp].contains(self) }
+    /// The URL scheme a bare address gets, or nil for an app.
+    var scheme: String? {
+        switch self {
+        case .web: return "https"
+        case .app: return nil
+        default: return rawValue
+        }
+    }
+
+    /// The editor's hint for the address field.
+    var example: String {
+        switch self {
+        case .web: return "https://nas.local:5001/admin"
+        case .smb: return "smb://user@nas.local/share"
+        case .nfs: return "nfs://nas.local/export"
+        case .vnc: return "vnc://user@mac.local"
+        case .ssh: return "ssh://user@nas.local:22"
+        case .sftp: return "sftp://user@nas.local"
+        case .app: return "Optional, e.g. myapp://{address}"
+        }
+    }
 
     /// Short name for the editor's add-service tiles.
     var tileName: String {
@@ -43,27 +62,6 @@ enum ServiceKind: String, CaseIterable {
         case .sftp: return "SFTP"
         case .app: return "App"
         }
-    }
-
-    /// The port the service uses when none is given, shown as a hint in the editor.
-    var defaultPort: Int? {
-        switch self {
-        case .web: return 443
-        case .smb: return 445
-        case .nfs: return 2049
-        case .vnc: return 5900
-        case .ssh, .sftp: return 22
-        case .app: return nil
-        }
-    }
-
-    /// Most self-hosted web UIs speak plain HTTP on their own port, so HTTPS is
-    /// assumed only for 443 (no port) and ports that are conventionally TLS.
-    static let tlsPorts: Set<Int> = [443, 5001, 8006, 8443, 9443, 10443, 11443]
-
-    static func impliesHTTPS(port: Int?) -> Bool {
-        guard let port else { return true }
-        return tlsPorts.contains(port)
     }
 
     /// SF Symbol shown in the menu.
@@ -84,48 +82,16 @@ extension Service {
     var title: String { label ?? kind.displayName }
 
     /// The URL handed to macOS (or, for an app service, to that app), which routes
-    /// each scheme to the right app:
-    /// http(s) → browser, smb/nfs → Finder, vnc → Screen Sharing, ssh → Terminal.
+    /// each scheme to the right app: http(s) → browser, smb/nfs → Finder,
+    /// vnc → Screen Sharing, ssh → Terminal. `{address}` is the server's address,
+    /// and an address with no scheme gets the type's own (https for web).
     func url(for server: Server) -> URL? {
-        let user = self.user
-
-        if let template = url {
-            let filled = template
-                .replacingOccurrences(of: "{address}", with: server.host)
-                .replacingOccurrences(of: "{host}", with: server.host)
-                .replacingOccurrences(of: "{user}", with: user ?? "")
-                .replacingOccurrences(of: "{port}", with: port.map { String($0) } ?? "")
-            return URL(string: filled)
-        }
-
-        var components = URLComponents()
-        components.host = server.host
-        components.port = port
-        if let path, !path.isEmpty {
-            components.path = path.hasPrefix("/") ? path : "/" + path
-        }
-
-        switch kind {
-        case .web:
-            components.scheme = (https ?? ServiceKind.impliesHTTPS(port: port)) ? "https" : "http"
-        case .smb:
-            components.scheme = "smb"
-            components.user = user
-        case .nfs:
-            components.scheme = "nfs"
-        case .vnc:
-            components.scheme = "vnc"
-            components.user = user
-        case .ssh:
-            components.scheme = "ssh"
-            components.user = user
-        case .sftp:
-            components.scheme = "sftp"
-            components.user = user
-        case .app:
-            // An app with no URL is just launched; see `bundle`.
-            return nil
-        }
-        return components.url
+        let custom = url?.trimmingCharacters(in: .whitespaces) ?? ""
+        guard let template = custom.isEmpty ? kind.scheme.map({ "\($0)://{address}" }) : custom else { return nil }
+        var text = template
+            .replacingOccurrences(of: "{address}", with: server.host)
+            .replacingOccurrences(of: "{host}", with: server.host)
+        if !text.contains("://"), let scheme = kind.scheme { text = "\(scheme)://\(text)" }
+        return URL(string: text)
     }
 }

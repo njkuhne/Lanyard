@@ -38,19 +38,6 @@ extension EditorPrompts {
     )
 }
 
-extension ConfigStore {
-    func openInEditor() {
-        if !NSWorkspace.shared.open(fileURL) {
-            let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
-            NSWorkspace.shared.open([fileURL], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
-        }
-    }
-
-    func revealInFinder() {
-        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-    }
-}
-
 enum Launcher {
     static func open(_ service: Service, on server: Server) {
         if service.kind == .app {

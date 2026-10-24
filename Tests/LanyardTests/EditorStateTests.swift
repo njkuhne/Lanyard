@@ -237,7 +237,8 @@ final class EditorStateTests: XCTestCase {
         state.toggle(.ssh)
         state.toggle(.ssh)
         XCTAssertEqual(state.kinds, [.web, .smb])
-        state.webPort = "5001"
+        XCTAssertEqual(state.webPrompt, "https://nas.lan:5001")
+        state.webAddress = "https://nas.lan:5001"
         state.webName = "DSM"
         state.webBadge = "DSMX"
         XCTAssertEqual(state.webBadge, "DSM")
@@ -247,7 +248,7 @@ final class EditorStateTests: XCTestCase {
         XCTAssertTrue(s.rawText.hasPrefix("# Lanyard"), "comments survive")
         guard case .server(let server) = s.config.entries.first else { return XCTFail("no server") }
         XCTAssertEqual(server.services.map(\.kind), [.web, .smb])
-        XCTAssertEqual(server.services[0].port, 5001)
+        XCTAssertEqual(server.services[0].url, "https://nas.lan:5001")
         XCTAssertEqual(server.services[0].badge, "DSM")
         XCTAssertFalse(state.isFirstServer)
 
@@ -256,6 +257,7 @@ final class EditorStateTests: XCTestCase {
         XCTAssertEqual(state.address, "")
         XCTAssertTrue(state.kinds.isEmpty)
         XCTAssertEqual(state.webBadge, "")
+        XCTAssertEqual(state.webPrompt, "https://nas.local:5001")
     }
 
     func testAddServerReportsErrors() {

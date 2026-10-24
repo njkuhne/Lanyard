@@ -1,13 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Per-Mac display preferences for the dropdown, kept in UserDefaults rather than the YAML.
-enum DisplayOption {
-    static let showAddresses = "showAddresses"
-    static let showServerIcons = "showServerIcons"
-    static let compactRows = "compactRows"
-}
-
 struct MenuContentView: View {
     @EnvironmentObject var store: ConfigStore
 
@@ -41,14 +34,13 @@ struct MenuContentView: View {
 
 struct ServerRow: View {
     @EnvironmentObject var store: ConfigStore
-    @AppStorage(DisplayOption.showAddresses) private var showAddresses = true
-    @AppStorage(DisplayOption.showServerIcons) private var showServerIcons = true
-    @AppStorage(DisplayOption.compactRows) private var compactRows = false
 
     let server: Server
     let index: Int
 
-    private var singleLine: Bool { compactRows || !showAddresses }
+    private var showAddresses: Bool { server.showAddress }
+    private var showServerIcons: Bool { server.showIcon }
+    private var singleLine: Bool { !server.showAddress }
 
     var body: some View {
         // Everything on one line when it fits; otherwise the name gets its own
@@ -320,27 +312,10 @@ struct EmptyStateView: View {
 
 struct FooterView: View {
     @EnvironmentObject var store: ConfigStore
-    @AppStorage(DisplayOption.showAddresses) private var showAddresses = true
-    @AppStorage(DisplayOption.showServerIcons) private var showServerIcons = true
-    @AppStorage(DisplayOption.compactRows) private var compactRows = false
 
     var body: some View {
         HStack {
-            Button {
-                Launcher.closeMenu()
-                EditorWindowController.addServer.show(store: store)
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("Add Server…")
-
             Spacer()
-
             Menu {
                 Button("Edit Servers…") {
                     Launcher.closeMenu()
@@ -352,23 +327,6 @@ struct FooterView: View {
                     EditorWindowController.yaml.show(store: store)
                 }
                 Divider()
-                Menu("Display") {
-                    Toggle("Show Addresses", isOn: $showAddresses)
-                    Toggle("Show Server Icons", isOn: $showServerIcons)
-                    Toggle("Compact Rows", isOn: $compactRows)
-                }
-                Menu("Config File") {
-                    Button("Open in External Editor") {
-                        Launcher.closeMenu()
-                        store.openInEditor()
-                    }
-                    Button("Show in Finder") {
-                        Launcher.closeMenu()
-                        store.revealInFinder()
-                    }
-                    Divider()
-                    Button("Reload") { store.reload() }
-                }
                 Toggle("Launch at Login", isOn: Binding(
                     get: { LoginItem.isEnabled },
                     set: { LoginItem.setEnabled($0) }

@@ -63,7 +63,7 @@ final class SnapshotTests: XCTestCase {
       - name: The Extremely Long Named Proxmox Cluster Node
         address: pve-node-01.homelab.internal.example.com
         services:
-    """ + (1...15).map { "\n          - web: { port: \(8000 + $0), name: App \($0), badge: A\($0) }" }.joined() + """
+    """ + (1...15).map { "\n          - web: { url: \"http://{address}:\(8000 + $0)\", name: App \($0), badge: A\($0) }" }.joined() + """
 
       - name: Router
         address: 192.168.1.1
@@ -76,15 +76,10 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(menu(store(Self.crowded)), named: "menu-overflow", width: 320)
     }
 
-    func testMenuCompactWithoutAddresses() {
-        let defaults = UserDefaults.standard
-        defaults.set(false, forKey: DisplayOption.showAddresses)
-        defaults.set(false, forKey: DisplayOption.showServerIcons)
-        defer {
-            defaults.removeObject(forKey: DisplayOption.showAddresses)
-            defaults.removeObject(forKey: DisplayOption.showServerIcons)
-        }
-        assertSnapshot(menu(store()), named: "menu-compact", width: 320)
+    func testMenuPerServerDisplay() {
+        let yaml = DemoConfig.text
+            .replacingOccurrences(of: "    address: nas.local\n", with: "    address: nas.local\n    show_address: false\n    show_icon: false\n")
+        assertSnapshot(menu(store(yaml)), named: "menu-compact", width: 320)
     }
 
     func testAddServerFirstRun() {
@@ -111,12 +106,13 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testServiceOptionsExpanded() {
-        let web = EditorService(kind: .web, port: "9443", label: "Grafana", badge: "GF")
-        let ssh = EditorService(kind: .ssh, user: "admin")
+        let web = EditorService(kind: .web, label: "Grafana", url: "http://{address}:3000", badge: "GF")
+        let ssh = EditorService(kind: .ssh, url: "ssh://admin@{address}")
         let form = Form {
             Section("Services") {
-                ServiceEditor(service: .constant(web), startExpanded: true) {}
-                ServiceEditor(service: .constant(ssh), startExpanded: true) {}
+                ServiceEditor(service: .constant(web), serverAddress: "docker.local", startExpanded: true) {}
+                ServiceEditor(service: .constant(ssh), serverAddress: "docker.local", startExpanded: true) {}
+                ServiceEditor(service: .constant(EditorService(kind: .smb)), serverAddress: "docker.local", startExpanded: true) {}
             }
         }
         .formStyle(.grouped)

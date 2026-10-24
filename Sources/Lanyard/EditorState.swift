@@ -209,7 +209,7 @@ final class AddServerState: ObservableObject {
     @Published var address = ""
     @Published var name = ""
     @Published private(set) var kinds: Set<ServiceKind> = []
-    @Published var webPort = ""
+    @Published var webAddress = ""
     @Published var webName = ""
     @Published var webBadge = "" {
         didSet { if webBadge.count > 3 { webBadge = String(webBadge.prefix(3)) } }
@@ -225,6 +225,12 @@ final class AddServerState: ObservableObject {
     }
 
     var isFirstServer: Bool { store.config.entries.isEmpty }
+    /// The web field's hint: the server's address, or an example.
+    var webPrompt: String {
+        let host = address.trimmingCharacters(in: .whitespaces)
+        return "https://\(host.isEmpty ? "nas.local" : host):5001"
+    }
+
     var canAdd: Bool { !address.trimmingCharacters(in: .whitespaces).isEmpty && !kinds.isEmpty }
 
     func toggle(_ kind: ServiceKind) {
@@ -236,7 +242,7 @@ final class AddServerState: ObservableObject {
     func add() -> Bool {
         let services = ServiceKind.allCases.filter(kinds.contains).map { kind in
             kind == .web
-                ? EditorService(kind: .web, port: webPort, label: webName, badge: webBadge)
+                ? EditorService(kind: .web, label: webName, url: webAddress, badge: webBadge)
                 : EditorService(kind: kind)
         }
         let item = EditorItem(name: name, host: address.trimmingCharacters(in: .whitespaces), services: services)
@@ -253,7 +259,7 @@ final class AddServerState: ObservableObject {
         address = ""
         name = ""
         kinds = []
-        webPort = ""
+        webAddress = ""
         webName = ""
         webBadge = ""
         added = nil

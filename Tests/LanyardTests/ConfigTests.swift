@@ -71,21 +71,24 @@ final class ConfigParserTests: XCTestCase {
               - web: { https: "no", name: Admin }
               - web: { https: "on" }
               - web: { https: maybe, port: "8443" }
+              - web: { user: nick, path: "" }
+              - ssh
               - { name: A, 1: b }
         """
         // The last service is a mapping with a non-string key and no type.
         XCTAssertNotNil(parseError(yaml))
         let services = try servers(yaml.replacingOccurrences(of: "      - { name: A, 1: b }", with: ""))[0].services
-        XCTAssertEqual(services[0].kind, .smb)
-        XCTAssertEqual(services[0].path, "/share")
-        XCTAssertEqual(services[0].https, true)
-        XCTAssertEqual(services[1].path, "/photos")
-        XCTAssertEqual(services[2].url, "https://a.lan/x")
-        XCTAssertEqual(services[3].https, false)
+        XCTAssertEqual(services.map(\.url), [
+            "smb://{address}/share",
+            "smb://{address}/photos",
+            "https://a.lan/x",
+            "http://{address}",
+            "https://{address}",
+            "https://{address}:8443",
+            "https://nick@{address}",
+            nil,
+        ])
         XCTAssertEqual(services[3].label, "Admin")
-        XCTAssertEqual(services[4].https, true)
-        XCTAssertNil(services[5].https)
-        XCTAssertEqual(services[5].port, 8443)
     }
 
     func testNonStringKeysAndNumericNames() throws {
@@ -106,29 +109,36 @@ final class ConfigParserTests: XCTestCase {
 final class ServiceKindTests: XCTestCase {
     private let server = Server(id: 1, name: "Box", host: "box.lan", icon: nil, services: [])
 
-    private func url(_ kind: ServiceKind, port: Int? = nil, path: String? = nil, user: String? = nil) -> String? {
-        Service(id: 1, kind: kind, port: port, path: path, user: user).url(for: server)?.absoluteString
+    private func url(_ kind: ServiceKind, _ address: String? = nil) -> String? {
+        Service(id: 1, kind: kind, url: address).url(for: server)?.absoluteString
     }
 
-    func testEveryKindBuildsAURL() {
-        XCTAssertEqual(url(.smb, path: "photos", user: "nick"), "smb://nick@box.lan/photos")
-        XCTAssertEqual(url(.nfs, path: "/export"), "nfs://box.lan/export")
-        XCTAssertEqual(url(.vnc, user: "admin"), "vnc://admin@box.lan")
-        XCTAssertEqual(url(.sftp, port: 2222, user: "nick"), "sftp://nick@box.lan:2222")
-        XCTAssertEqual(url(.web, path: ""), "https://box.lan")
+    func testEmptyAddressUsesTheServer() {
+        XCTAssertEqual(url(.web), "https://box.lan")
+        XCTAssertEqual(url(.web, "  "), "https://box.lan")
+        XCTAssertEqual(url(.smb), "smb://box.lan")
+        XCTAssertEqual(url(.nfs), "nfs://box.lan")
+        XCTAssertEqual(url(.vnc), "vnc://box.lan")
+        XCTAssertEqual(url(.ssh), "ssh://box.lan")
+        XCTAssertEqual(url(.sftp), "sftp://box.lan")
+        XCTAssertNil(url(.app))
+    }
+
+    func testAddressesAreUsedAsWritten() {
+        XCTAssertEqual(url(.web, "http://grafana.lan:3000/d/home"), "http://grafana.lan:3000/d/home")
+        XCTAssertEqual(url(.ssh, "ssh://root@{address}:2222"), "ssh://root@box.lan:2222")
+        XCTAssertEqual(url(.web, "nas.lan:5001"), "https://nas.lan:5001", "no scheme gets the type's own")
+        XCTAssertEqual(url(.smb, "{host}/photos"), "smb://box.lan/photos")
     }
 
     func testNamesPortsAndFields() {
         for kind in ServiceKind.allCases {
             XCTAssertFalse(kind.displayName.isEmpty)
             XCTAssertFalse(kind.tileName.isEmpty)
-            XCTAssertEqual(kind.defaultPort == nil, kind == .app)
+            XCTAssertEqual(kind.scheme == nil, kind == .app)
+            XCTAssertFalse(kind.example.isEmpty)
             XCTAssertTrue(SymbolCatalog.isAvailable(kind.defaultSymbol), kind.defaultSymbol)
         }
-        XCTAssertTrue(ServiceKind.web.usesPath)
-        XCTAssertFalse(ServiceKind.ssh.usesPath)
-        XCTAssertTrue(ServiceKind.ssh.usesUser)
-        XCTAssertFalse(ServiceKind.web.usesUser)
         XCTAssertEqual(ServiceKind(alias: "Screen-Sharing"), .vnc)
         XCTAssertEqual(ServiceKind(alias: "https"), .web)
         XCTAssertNil(ServiceKind(alias: "gopher"))
@@ -248,21 +258,9 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(EditorItem(isDivider: true, name: "Remote").listTitle, "Remote")
     }
 
-    func testHTTPSToggleOnlyStoresOverrides() {
-        var service = EditorService(kind: .web, port: "8123")
-        XCTAssertFalse(service.usesHTTPS)
-        service.usesHTTPS = true
-        XCTAssertEqual(service.https, true)
-        service.usesHTTPS = false
-        XCTAssertNil(service.https)
-    }
-
     func testSummary() {
-        XCTAssertEqual(EditorService(kind: .web, port: "9443", label: "Portainer").summary, "Portainer · :9443")
-        XCTAssertEqual(EditorService(kind: .smb, path: "/photos", user: "nick").summary, "nick · /photos")
-        XCTAssertEqual(EditorService(kind: .ssh, path: "/ignored").summary, "")
-        XCTAssertEqual(EditorService(kind: .web, https: false).summary, "HTTP")
-        XCTAssertEqual(EditorService(kind: .web, https: true).summary, "HTTPS")
+        XCTAssertEqual(EditorService(kind: .web, label: "Portainer", url: "https://nas:9443").summary, "Portainer · https://nas:9443")
+        XCTAssertEqual(EditorService(kind: .ssh).summary, "")
         XCTAssertEqual(EditorService(kind: .web, label: "Admin", url: "https://{address}/x").summary, "Admin · https://{address}/x")
     }
 
@@ -271,7 +269,8 @@ final class EditorModelTests: XCTestCase {
             EditorItem(isDivider: true),
             EditorItem(isDivider: true, name: "Remote"),
             EditorItem(name: "", host: "a.lan", icon: "cpu", services: [
-                EditorService(kind: .ssh, port: "2222", user: "root", icon: "terminal.fill"),
+                EditorService(kind: .ssh, icon: "terminal.fill", url: "ssh://root@{address}:2222"),
+                EditorService(kind: .web, url: "https://a.lan:5001"),
                 EditorService(kind: .web, label: "yes", badge: "Y"),
             ]),
         ]
@@ -279,7 +278,8 @@ final class EditorModelTests: XCTestCase {
         XCTAssertTrue(yaml.contains("  - divider\n"))
         XCTAssertTrue(yaml.contains("  - divider: Remote\n"))
         XCTAssertTrue(yaml.contains("  - name: a.lan\n    address: a.lan\n    icon: cpu\n"))
-        XCTAssertTrue(yaml.contains("- ssh: { port: 2222, user: root, icon: terminal.fill }"))
+        XCTAssertTrue(yaml.contains("- ssh: { url: \"ssh://root@{address}:2222\", icon: terminal.fill }"))
+        XCTAssertTrue(yaml.contains("- web: \"https://a.lan:5001\"\n"), "a lone address is written on one line")
         XCTAssertTrue(yaml.contains("- web: { name: \"yes\", badge: \"Y\" }"), "reserved words are quoted")
         XCTAssertEqual(EditorModel.yaml(from: []), "# Lanyard config\nservers:\n  []\n")
         XCTAssertEqual(try ConfigParser.parse(yaml).entries.count, 3)
@@ -292,22 +292,29 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(EditorModel.quote("trailing "), "\"trailing \"")
     }
 
-    func testLoadingKeepsOnlyRealOverrides() throws {
+    func testDividersBareServicesAndDisplaySettingsRoundTrip() throws {
         let config = try ConfigParser.parse("""
         servers:
           - divider
           - name: A
             address: a
+            show_address: false
+            show_icon: no
             services:
               - ssh
-              - https
-              - web: { port: 8123, https: true }
+          - name: B
+            address: b
         """)
         let items = EditorModel.items(from: config)
         XCTAssertEqual(items[0].name, "")
-        XCTAssertNil(items[1].services[1].https, "matches the default, so not an override")
-        XCTAssertEqual(items[1].services[2].https, true)
-        XCTAssertTrue(EditorModel.yaml(from: items).contains("      - ssh\n"))
+        XCTAssertFalse(items[1].showAddress)
+        XCTAssertFalse(items[1].showIcon)
+        XCTAssertTrue(items[2].showAddress)
+        XCTAssertTrue(items[2].showIcon)
+        let yaml = EditorModel.yaml(from: items)
+        XCTAssertTrue(yaml.contains("    show_address: false\n    show_icon: false\n"))
+        XCTAssertTrue(yaml.contains("      - ssh\n"))
+        XCTAssertEqual(yaml.components(separatedBy: "show_address").count, 2, "only written when hidden")
     }
 
     func testLoadingDropsIconsThatMatchTheDefault() throws {
@@ -388,7 +395,6 @@ final class AppServiceTests: XCTestCase {
         let short = try service("app: com.microsoft.rdc.macos")
         XCTAssertEqual(short.kind, .app)
         XCTAssertEqual(short.bundle, "com.microsoft.rdc.macos")
-        XCTAssertNil(short.path)
         XCTAssertNil(short.url(for: server), "no URL: the app is just launched")
 
         let long = try service("launch: { bundle: com.example.App, url: \"example://{address}\", name: Example }")
@@ -404,8 +410,6 @@ final class AppServiceTests: XCTestCase {
         XCTAssertEqual(items[0].services[0].bundle, "com.example.App")
         XCTAssertEqual(items[0].services[0].summary, "Example · com.example.App")
         XCTAssertTrue(EditorModel.yaml(from: items).contains("- app: { bundle: com.example.App, name: Example }"))
-        XCTAssertFalse(ServiceKind.app.usesPath)
-        XCTAssertFalse(ServiceKind.app.usesUser)
         XCTAssertEqual(ServiceKind.app.tileName, "App")
     }
 }
