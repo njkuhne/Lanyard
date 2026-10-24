@@ -49,10 +49,11 @@ The DMG window layout (background with arrow, icon positions) is applied by
 `scripts/dmg/layout.applescript` via Finder; if Finder automation is refused it
 falls back to a plain folder window. `scripts/dmg/background.svg` is the source
 for the committed 1x/2x PNGs. `.github/workflows/ci.yml` runs tests, coverage
-and a DMG on every push to main and on PRs; `.github/workflows/release.yml` cuts releases: run it from the Actions tab or
-`scripts/release.sh patch|minor|major|X.Y.Z`; it bumps the version with
-`scripts/bump-version.sh`, tests, builds, then commits/tags/pushes and publishes.
-It also runs on hand-pushed `v*` tags (logic tests only on CI,
+and a DMG on every push to main and on PRs; `.github/workflows/release.yml` publishes a GitHub release for every pushed tag
+(`-suffix` tags are pre-releases; others are marked Latest), with notes from
+`scripts/release-notes.py` (commits since the previous tag). `scripts/release.sh
+patch|minor|major|X.Y.Z` bumps the version (`scripts/bump-version.sh`), commits,
+tags and pushes; the Actions-tab Run workflow does the same on GitHub (logic tests only on CI,
 since snapshot images vary by machine) and attaches the DMG to the release.
 Nick has no Developer ID Application certificate yet (only Development and
 Apple Distribution, team WYMF4736GN), so DMGs are unsigned until he makes one.

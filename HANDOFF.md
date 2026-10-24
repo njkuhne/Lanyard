@@ -55,9 +55,8 @@ standing project guide; this file is the "where we left off".
   comfortable with Xcode and Swift but wants things to just work.
 - He wants Lanyard to appeal to homelab people: open source, YAML config, and
   sold on the Mac App Store.
-- His own servers to test with:
-  - `nas.nickopolis.net` (Synology: web UI + file sharing)
-  - `Pseudoserver` (Mac mini: Screen Sharing + file sharing)
+- He tests with a Synology NAS (web UI + file sharing) and a Mac mini
+  (Screen Sharing + file sharing).
 
 ## After v0.1 runs
 

@@ -2,6 +2,13 @@
 
 Your home servers, one click away from the Mac menu bar.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Tests/LanyardTests/__Snapshots__/menu-dark.png">
+    <img src="Tests/LanyardTests/__Snapshots__/menu.png" alt="Lanyard's menu: servers with a button per service" width="320">
+  </picture>
+</p>
+
 Lanyard lives in the menu bar (no Dock icon). Click it to see your servers, each
 with a button per service. Click a button and macOS opens the right tool:
 
@@ -26,9 +33,18 @@ Requires macOS 13 or later.
 ## Use
 
 On first launch Lanyard asks for your first server: its address, and what you
-open on it. After that, the gear menu has **Edit Servers…** (a form) and
+open on it.
+
+<p align="center">
+  <img src="Tests/LanyardTests/__Snapshots__/add-server-first-run.png" alt="Add your first server" width="440">
+</p>
+ After that, the gear menu has **Edit Servers…** (a form) and
 **Edit YAML…** (the raw file; paste a whole setup in). Right-click a server in
 the menu to edit just that one, copy its address, or open any of its services.
+
+<p align="center">
+  <img src="Tests/LanyardTests/__Snapshots__/editor-docker-host.png" alt="The Edit Servers window" width="640">
+</p>
 
 ```yaml
 servers:
@@ -81,20 +97,18 @@ scripts/make-dmg.sh        # builds build/Lanyard-<version>.dmg
 
 ## Releasing
 
-Every push to `main` runs the tests and builds a DMG you can download from the
-run's Artifacts. The DMG opens to a window showing Lanyard and an Applications
-shortcut to drag it onto.
-
-To release, run **Actions → Release → Run workflow** on GitHub (choose patch,
-minor or major, or type a version), or from a clean, pushed `main`:
+Every tag is a release. To cut one from a clean, pushed `main`:
 
 ```sh
-scripts/release.sh minor
+scripts/release.sh minor        # or patch, major, 1.4.0, 1.5.0-beta.1
 ```
 
-It bumps the version and build number, runs the tests, builds the DMG, commits
-and tags `vX.Y.Z`, and publishes a GitHub release with the DMG and notes
-generated from the commits. Pushing a `v*` tag by hand also works.
+That bumps the version, commits, tags `vX.Y.Z` and pushes. GitHub then tests,
+builds the DMG, writes release notes from the commits since the last tag, and
+publishes the release marked **Latest**. A tag with a suffix (`v1.5.0-beta.1`)
+becomes a pre-release instead. You can also push a tag by hand, or use
+**Actions → Release → Run workflow**. Every push to `main` also builds a DMG you
+can grab from the run's Artifacts.
 
 Without signing secrets the DMG is unsigned, and macOS asks people to approve it
 in System Settings → Privacy & Security on first open. To ship a DMG that opens
