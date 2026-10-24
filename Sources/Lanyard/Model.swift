@@ -22,7 +22,6 @@ struct Server: Identifiable {
     let id: Int
     var name: String
     var host: String
-    var user: String?
     var icon: String?
     var services: [Service]
 }

@@ -75,7 +75,6 @@ enum ConfigParser {
                 id: nextID(),
                 name: name,
                 host: host,
-                user: string(fields["user"]),
                 icon: string(fields["icon"]),
                 services: services
             )))

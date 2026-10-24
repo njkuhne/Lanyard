@@ -19,8 +19,10 @@ servers:
 
   - name: Mac mini
     host: mac-mini.local
-    user: admin
-    services: [vnc, smb, ssh]
+    services:
+      - vnc: { user: admin }
+      - smb: { user: admin }
+      - ssh: { user: admin }
 
   - divider: Remote
 

@@ -52,7 +52,7 @@ extension Service {
     /// The URL handed to macOS, which routes each scheme to the right app:
     /// http(s) → browser, smb/nfs → Finder, vnc → Screen Sharing, ssh → Terminal.
     func url(for server: Server) -> URL? {
-        let user = self.user ?? server.user
+        let user = self.user
 
         if let template = url {
             let filled = template

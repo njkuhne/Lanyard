@@ -21,7 +21,7 @@ final class EditorWindowController {
             self.window = window
         }
         guard let window else { return }
-        if !window.isVisible {
+        if !window.isVisible && !window.isMiniaturized {
             // Fresh view each time it opens, so it starts from what's on disk.
             window.contentView = NSHostingView(rootView: ConfigEditorView().environmentObject(store))
         }

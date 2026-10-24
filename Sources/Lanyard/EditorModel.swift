@@ -18,7 +18,6 @@ struct EditorItem: Identifiable, Equatable {
     var isDivider = false
     var name = ""
     var host = ""
-    var user = ""
     var icon = ""
     var services: [EditorService] = []
 
@@ -39,7 +38,6 @@ enum EditorModel {
                 return EditorItem(
                     name: server.name,
                     host: server.host,
-                    user: server.user ?? "",
                     icon: server.icon ?? "",
                     services: server.services.map { s in
                         EditorService(
@@ -71,7 +69,6 @@ enum EditorModel {
             let name = item.name.trimmingCharacters(in: .whitespaces)
             out += "  - name: \(quote(name.isEmpty ? host : name))\n"
             out += "    host: \(quote(host))\n"
-            if !item.user.isEmpty { out += "    user: \(quote(item.user))\n" }
             if !item.icon.isEmpty { out += "    icon: \(quote(item.icon))\n" }
             if !item.services.isEmpty {
                 out += "    services:\n"

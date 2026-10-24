@@ -45,8 +45,7 @@ struct ConfigEditorView: View {
         }
         .frame(minWidth: 720, minHeight: 480)
         .onAppear(perform: loadFromStore)
-        .onChange(of: store.rawText) { _ in
-            // Pick up outside edits, but never clobber unsaved work.
+        .onChange(of: store.rawText) {
             if !formDirty && !yamlDirty { loadFromStore() }
         }
     }
@@ -112,11 +111,14 @@ struct ConfigEditorView: View {
     @ViewBuilder
     private var detail: some View {
         if let id = selection, let item = items.first(where: { $0.id == id }) {
-            if item.isDivider {
-                DividerEditor(item: binding(for: id))
-            } else {
-                ServerEditor(item: binding(for: id))
+            Group {
+                if item.isDivider {
+                    DividerEditor(item: binding(for: id))
+                } else {
+                    ServerEditor(item: binding(for: id))
+                }
             }
+            .id(id)
         } else {
             Text(items.isEmpty ? "Add a server with +" : "Select a server")
                 .foregroundStyle(.secondary)
@@ -281,15 +283,15 @@ struct ServerEditor: View {
             Section {
                 TextField("Name", text: $item.name, prompt: Text("NAS"))
                 TextField("Host", text: $item.host, prompt: Text("nas.local"))
-                TextField("User", text: $item.user, prompt: Text("Optional, used by SMB, VNC, SSH"))
-                TextField("Icon", text: $item.icon, prompt: Text("Optional SF Symbol, e.g. externaldrive"))
+                LabeledContent("Icon") {
+                    SymbolPicker(selection: $item.icon)
+                }
             }
 
             Section("Services") {
-                ForEach($item.services) { $service in
-                    let id = service.id
-                    ServiceEditor(service: $service) {
-                        item.services.removeAll { $0.id == id }
+                ForEach(item.services) { service in
+                    ServiceEditor(service: binding(for: service)) {
+                        item.services.removeAll { $0.id == service.id }
                     }
                 }
                 Menu("Add Service") {
@@ -304,14 +306,35 @@ struct ServerEditor: View {
         }
         .formStyle(.grouped)
     }
+
+    // Looked up by id, not array index: index-based bindings crash when a row
+    // outlives its service (deleted, or the list reloaded from disk).
+    private func binding(for service: EditorService) -> Binding<EditorService> {
+        Binding(
+            get: { item.services.first(where: { $0.id == service.id }) ?? service },
+            set: { newValue in
+                if let index = item.services.firstIndex(where: { $0.id == service.id }) {
+                    item.services[index] = newValue
+                }
+            }
+        )
+    }
 }
 
 struct ServiceEditor: View {
     @Binding var service: EditorService
     var onDelete: () -> Void
+    @State private var showOptions = false
 
     private var usesPath: Bool { [ServiceKind.web, .smb, .nfs, .sftp].contains(service.kind) }
-    private var usesUser: Bool { [ServiceKind.smb, .vnc, .ssh, .sftp].contains(service.kind) }
+    private var usesUser: Bool { [ServiceKind.smb, .vnc, .ssh, .sftp, .rdp].contains(service.kind) }
+
+    private var hasOverrides: Bool {
+        !service.port.isEmpty || !service.path.isEmpty || !service.user.isEmpty
+            || !service.label.isEmpty || !service.icon.isEmpty
+            || (service.kind == .web && service.https)
+            || (service.kind == .custom && !service.url.isEmpty)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -330,6 +353,14 @@ struct ServiceEditor: View {
                         .toggleStyle(.checkbox)
                 }
                 Spacer()
+                Button {
+                    withAnimation { showOptions.toggle() }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(hasOverrides ? .primary : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Customize")
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
                 }
@@ -337,32 +368,39 @@ struct ServiceEditor: View {
                 .help("Remove service")
             }
 
-            if service.kind == .custom {
-                TextField("URL", text: $service.url, prompt: Text("URL, e.g. https://{host}:9443"))
+            if showOptions {
+                VStack(alignment: .leading, spacing: 6) {
+                    if service.kind == .custom {
+                        TextField("URL", text: $service.url, prompt: Text("https://{host}:9443"))
+                            .labelsHidden()
+                    } else {
+                        HStack {
+                            TextField("Port", text: $service.port, prompt: Text("Port"))
+                                .frame(width: 80)
+                            if usesPath {
+                                TextField("Path", text: $service.path, prompt: Text("Path"))
+                            }
+                            if usesUser {
+                                TextField("User", text: $service.user, prompt: Text("User"))
+                                    .frame(width: 120)
+                            }
+                        }
+                        .labelsHidden()
+                    }
+                    HStack {
+                        TextField("Label", text: $service.label, prompt: Text("Label"))
+                        LabeledContent("Icon") {
+                            SymbolPicker(selection: $service.icon)
+                        }
+                    }
                     .labelsHidden()
-            } else {
-                HStack {
-                    TextField("Port", text: $service.port, prompt: Text("Port"))
-                        .frame(width: 80)
-                    if usesPath {
-                        TextField("Path", text: $service.path, prompt: Text("Path"))
-                    }
-                    if usesUser {
-                        TextField("User", text: $service.user, prompt: Text("User"))
-                            .frame(width: 120)
-                    }
                 }
-                .labelsHidden()
+                .textFieldStyle(.roundedBorder)
+                .padding(.leading, 26)
             }
-
-            HStack {
-                TextField("Label", text: $service.label, prompt: Text("Label (\(service.kind.displayName))"))
-                TextField("Icon", text: $service.icon, prompt: Text("Icon (\(service.kind.defaultSymbol))"))
-            }
-            .labelsHidden()
         }
-        .textFieldStyle(.roundedBorder)
         .padding(.vertical, 4)
+        .onAppear { showOptions = hasOverrides }
     }
 }
 
