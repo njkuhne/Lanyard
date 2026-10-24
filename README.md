@@ -85,12 +85,16 @@ Every push to `main` runs the tests and builds a DMG you can download from the
 run's Artifacts. The DMG opens to a window showing Lanyard and an Applications
 shortcut to drag it onto.
 
-Push a version tag and GitHub Actions builds the DMG and attaches it to the
-release:
+To release, run **Actions → Release → Run workflow** on GitHub (choose patch,
+minor or major, or type a version), or from a clean, pushed `main`:
 
 ```sh
-git tag v0.2.0 && git push origin v0.2.0
+scripts/release.sh minor
 ```
+
+It bumps the version and build number, runs the tests, builds the DMG, commits
+and tags `vX.Y.Z`, and publishes a GitHub release with the DMG and notes
+generated from the commits. Pushing a `v*` tag by hand also works.
 
 Without signing secrets the DMG is unsigned, and macOS asks people to approve it
 in System Settings → Privacy & Security on first open. To ship a DMG that opens

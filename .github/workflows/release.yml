@@ -1,5 +1,9 @@
-# Builds Lanyard-<version>.dmg when a version tag (v0.2.0) is pushed and attaches it
-# to the GitHub release. Run it by hand from the Actions tab to just get the DMG.
+# Publishes a release: bumps the version, tests, builds the DMG, tags, and
+# creates the GitHub release with the DMG attached.
+#
+# Start it from Actions → Release → Run workflow (choose patch/minor/major or
+# type a version), or run `scripts/release.sh minor`. Pushing a v* tag by hand
+# also works; then the version comes from the tag and nothing is bumped.
 #
 # Without secrets the DMG is unsigned. To sign and notarize, add repository secrets:
 #   DEVELOPER_ID            "Developer ID Application: Your Name (TEAMID)"
@@ -13,22 +17,51 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "patch, minor, major, or an exact version like 1.2.0"
+        required: true
+        default: patch
 
 permissions:
   contents: write
 
+concurrency: release
+
 jobs:
-  dmg:
+  release:
     runs-on: macos-15
     env:
       HAS_SIGNING: ${{ secrets.DEVELOPER_ID_P12 != '' }}
       HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8 != '' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Choose version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "Releases are cut from main." >&2; exit 1
+            fi
+            VERSION=$(scripts/bump-version.sh "$BUMP")
+            if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+              echo "v$VERSION already exists." >&2; exit 1
+            fi
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Releasing $VERSION"
 
       - name: Test
         # Snapshot images depend on the Mac's fonts and OS, so CI runs the logic tests only.
-        run: swift test --skip SnapshotTests
+        run: |
+          swift test --skip SnapshotTests
+          scripts/coverage.sh --skip SnapshotTests
 
       - name: Import signing certificate
         if: env.HAS_SIGNING == 'true'
@@ -37,12 +70,13 @@ jobs:
           P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
         run: |
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          security create-keychain -p "" "$KEYCHAIN"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "" "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
           security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN" login.keychain
           rm "$RUNNER_TEMP/cert.p12"
 
@@ -50,7 +84,9 @@ jobs:
         if: env.HAS_NOTARY == 'true'
         env:
           P8: ${{ secrets.NOTARY_KEY_P8 }}
-        run: echo "$P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+        run: |
+          umask 077
+          echo "$P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
 
       - name: Build DMG
         env:
@@ -58,19 +94,34 @@ jobs:
           NOTARY_KEY: ${{ env.HAS_NOTARY == 'true' && format('{0}/notary.p8', runner.temp) || '' }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: scripts/make-dmg.sh
+
+      - name: Commit version and tag
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION="${GITHUB_REF_NAME#v}"; fi
-          scripts/make-dmg.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release v$VERSION"
+          git tag "v$VERSION"
+          git push origin HEAD:main "v$VERSION"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Lanyard-dmg
+          name: Lanyard-${{ env.VERSION }}
           path: build/Lanyard-*.dmg
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" build/Lanyard-*.dmg --clobber
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" build/Lanyard-*.dmg --clobber
+          else
+            gh release create "v$VERSION" build/Lanyard-*.dmg --title "Lanyard $VERSION" --generate-notes --verify-tag
+          fi
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/notary.p8"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
