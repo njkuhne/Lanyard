@@ -1,0 +1,76 @@
+# Builds Lanyard-<version>.dmg when a version tag (v0.2.0) is pushed and attaches it
+# to the GitHub release. Run it by hand from the Actions tab to just get the DMG.
+#
+# Without secrets the DMG is unsigned. To sign and notarize, add repository secrets:
+#   DEVELOPER_ID            "Developer ID Application: Your Name (TEAMID)"
+#   DEVELOPER_ID_P12        that certificate exported as .p12, base64-encoded
+#   DEVELOPER_ID_P12_PASSWORD
+#   NOTARY_KEY_P8           App Store Connect API key (.p8), base64-encoded
+#   NOTARY_KEY_ID, NOTARY_ISSUER
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    runs-on: macos-15
+    env:
+      HAS_SIGNING: ${{ secrets.DEVELOPER_ID_P12 != '' }}
+      HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        # Snapshot images depend on the Mac's fonts and OS, so CI runs the logic tests only.
+        run: swift test --skip SnapshotTests
+
+      - name: Import signing certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Prepare notarization key
+        if: env.HAS_NOTARY == 'true'
+        env:
+          P8: ${{ secrets.NOTARY_KEY_P8 }}
+        run: echo "$P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+
+      - name: Build DMG
+        env:
+          DEVELOPER_ID: ${{ env.HAS_SIGNING == 'true' && secrets.DEVELOPER_ID || '' }}
+          NOTARY_KEY: ${{ env.HAS_NOTARY == 'true' && format('{0}/notary.p8', runner.temp) || '' }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION="${GITHUB_REF_NAME#v}"; fi
+          scripts/make-dmg.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lanyard-dmg
+          path: build/Lanyard-*.dmg
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" build/Lanyard-*.dmg --clobber

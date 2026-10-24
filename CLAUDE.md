@@ -40,6 +40,16 @@ as screenshots of each flow (menu, editor states, icon picker, light and dark).
 `swift build` also catches APIs newer than macOS 13, which the Xcode build
 didn't until its deployment-target override was removed.
 
+## Releasing
+
+`scripts/make-dmg.sh` builds a universal Release app and `build/Lanyard-<version>.dmg`
+(`VERSION=0.2.0` overrides the version). Unsigned unless `DEVELOPER_ID` is set;
+notarizes with `NOTARY_PROFILE` or `NOTARY_KEY`/`NOTARY_KEY_ID`/`NOTARY_ISSUER`.
+`.github/workflows/release.yml` runs it on `v*` tags (logic tests only on CI,
+since snapshot images vary by machine) and attaches the DMG to the release.
+Nick has no Developer ID Application certificate yet (only Development and
+Apple Distribution, team WYMF4736GN), so DMGs are unsigned until he makes one.
+
 ## Coverage
 
 ```sh
