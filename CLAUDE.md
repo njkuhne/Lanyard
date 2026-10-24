@@ -58,6 +58,13 @@ since snapshot images vary by machine) and attaches the DMG to the release.
 Nick has no Developer ID Application certificate yet (only Development and
 Apple Distribution, team WYMF4736GN), so DMGs are unsigned until he makes one.
 
+## README screenshots
+
+`docs/screenshots/` is rendered by `Tests/LanyardTests/ScreenshotTests.swift`: the
+real views placed on a neutral desktop with a menu bar and window chrome, using
+the demo config (never a real one). Regenerate with
+`SCREENSHOTS=1 swift test --filter ScreenshotTests`; it's skipped otherwise.
+
 ## Coverage
 
 ```sh

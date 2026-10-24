@@ -58,7 +58,7 @@ func assertSnapshot<V: View>(
 }
 
 @MainActor
-private func render<V: View>(_ view: V, width: CGFloat, height: CGFloat?, appearance: SnapshotAppearance) -> Data? {
+func render<V: View>(_ view: V, width: CGFloat, height: CGFloat?, appearance: SnapshotAppearance) -> Data? {
     let host = NSHostingView(rootView: view)
     host.appearance = appearance.nsAppearance
 

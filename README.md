@@ -4,8 +4,8 @@ Your home servers, one click away from the Mac menu bar.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Tests/LanyardTests/__Snapshots__/menu-dark.png">
-    <img src="Tests/LanyardTests/__Snapshots__/menu.png" alt="Lanyard's menu: servers with a button per service" width="320">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-dark.png">
+    <img src="docs/screenshots/menu.png" alt="Lanyard's menu open from the menu bar: servers with a button per service" width="760">
   </picture>
 </p>
 
@@ -37,14 +37,14 @@ On first launch Lanyard asks for your first server: its address, and what you
 open on it.
 
 <p align="center">
-  <img src="Tests/LanyardTests/__Snapshots__/add-server-first-run.png" alt="Add your first server" width="440">
+  <img src="docs/screenshots/first-run.png" alt="The Add Server window on first launch" width="620">
 </p>
  After that, the gear menu has **Edit Servers…** (a form) and
 **Edit YAML…** (the raw file; paste a whole setup in). Right-click a server in
 the menu to edit just that one, copy its address, or open any of its services.
 
 <p align="center">
-  <img src="Tests/LanyardTests/__Snapshots__/editor-docker-host.png" alt="The Edit Servers window" width="640">
+  <img src="docs/screenshots/editor.png" alt="The Edit Servers window" width="760">
 </p>
 
 ```yaml
@@ -94,6 +94,7 @@ open Lanyard.xcodeproj     # then ⌘R
 swift test                 # tests, including UI snapshot tests
 scripts/coverage.sh        # fails unless the logic is 100% covered
 scripts/make-dmg.sh        # builds build/Lanyard-<version>.dmg
+SCREENSHOTS=1 swift test --filter ScreenshotTests   # regenerates docs/screenshots
 ```
 
 ## Releasing
