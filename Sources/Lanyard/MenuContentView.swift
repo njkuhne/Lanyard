@@ -199,6 +199,7 @@ struct FlowLayout: Layout {
 struct ServiceButton: View {
     let service: Service
     let server: Server
+    var forceHover = false
     @State private var hovering = false
 
     var body: some View {
@@ -206,10 +207,11 @@ struct ServiceButton: View {
             Launcher.open(service, on: server)
         } label: {
             ServiceGlyph(service: service)
-                .frame(width: 26, height: 24)
+                .padding(.horizontal, 5)
+                .frame(minWidth: 26, minHeight: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(hovering ? Theme.accent.opacity(0.22) : Color.clear)
+                        .fill(hovering || forceHover ? Theme.accent.opacity(0.22) : Color.clear)
                 )
                 .contentShape(Rectangle())
         }

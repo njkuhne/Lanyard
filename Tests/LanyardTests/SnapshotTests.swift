@@ -76,6 +76,19 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(menu(store(Self.crowded)), named: "menu-overflow", width: 320)
     }
 
+    func testServiceButtonHoverPadding() {
+        let server = Server(id: 1, name: "Box", host: "box.lan", icon: nil, services: [])
+        let row = HStack(spacing: 2) {
+            ForEach([Service(id: 1, kind: .ssh), Service(id: 2, kind: .web, badge: "G"),
+                     Service(id: 3, kind: .web, badge: "GF"), Service(id: 4, kind: .web, badge: "DIR")]) { service in
+                ServiceButton(service: service, server: server, forceHover: true)
+            }
+        }
+        .padding(8)
+        .background(Color(nsColor: .windowBackgroundColor))
+        assertSnapshot(row, named: "service-buttons-hover", width: 170, height: 40)
+    }
+
     func testMenuPerServerDisplay() {
         let yaml = DemoConfig.text
             .replacingOccurrences(of: "    address: nas.local\n", with: "    address: nas.local\n    show_address: false\n    show_icon: false\n")

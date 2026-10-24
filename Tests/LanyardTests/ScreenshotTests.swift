@@ -45,6 +45,28 @@ final class ScreenshotTests: XCTestCase {
         }
     }
 
+    /// A server with a long name and 15 services, next to an ordinary one.
+    func testCrowdedMenu() throws {
+        let apps = ["Portainer:PT", "Grafana:GF", "Prometheus:PR", "Home Assistant:HA", "Jellyfin:JF", "Sonarr:SN",
+                    "Radarr:RD", "Prowlarr:PW", "qBittorrent:QB", "Nextcloud:NC", "Vaultwarden:VW", "Immich:IM",
+                    "Paperless:PL", "Uptime Kuma:UK"]
+        var yaml = "servers:\n  - name: Proxmox cluster node with a very long name\n    address: pve-node-01.homelab.internal\n    services:\n"
+        for (i, entry) in apps.enumerated() {
+            let parts = entry.split(separator: ":")
+            yaml += "      - web: { url: \"http://pve-node-01.homelab.internal:\(8000 + i)\", name: \(parts[0]), badge: \(parts[1]) }\n"
+        }
+        yaml += "      - ssh\n  - name: NAS\n    address: nas.local\n    services:\n      - web: https://nas.local:5001\n      - smb\n"
+        let scene = Desktop(dark: false) {
+            MenuPanel {
+                MenuContentView().environmentObject(store(yaml))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            .padding(.top, 4)
+            .padding(.trailing, 118)
+        }
+        try save(scene, "menu-crowded", dark: false, width: 900, height: 420)
+    }
+
     func testEditor() throws {
         let scene = Desktop(dark: false) {
             FakeWindow(title: "Edit Servers") {
