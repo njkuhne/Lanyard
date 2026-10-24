@@ -26,6 +26,20 @@ pkill -x Lanyard
 After any change: build, fix every error, and re-build until clean before
 reporting done. Treat new warnings as worth fixing too.
 
+## Snapshot tests
+
+```sh
+swift test                      # compare UI against Tests/LanyardTests/__Snapshots__
+RECORD_SNAPSHOTS=1 swift test   # re-record after an intended UI change, then review the PNGs
+```
+
+Tests run through SwiftPM because an Xcode-hosted test runs inside the
+sandboxed app and can't write reference images into the repo. A mismatch
+writes the actual image to `build/snapshot-failures/`. The reference PNGs double
+as screenshots of each flow (menu, editor states, icon picker, light and dark).
+`swift build` also catches APIs newer than macOS 13, which the Xcode build
+didn't until its deployment-target override was removed.
+
 ## Project status
 
 - v0.1 was written without ever being compiled. **First job: get a clean build.**

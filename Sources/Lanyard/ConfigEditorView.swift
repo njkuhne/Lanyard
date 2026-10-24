@@ -5,12 +5,18 @@ import UniformTypeIdentifiers
 struct ConfigEditorView: View {
     @EnvironmentObject var store: ConfigStore
 
-    private enum Tab: Hashable { case servers, yaml }
+    enum Tab: Hashable { case servers, yaml }
 
-    @State private var tab: Tab = .servers
+    @State private var tab: Tab
     @State private var items: [EditorItem] = []
     @State private var savedItems: [EditorItem] = []
     @State private var selection: EditorItem.ID?
+    private let initialSelectionIndex: Int?
+
+    init(tab: Tab = .servers, selectedIndex: Int? = nil) {
+        _tab = State(initialValue: tab)
+        initialSelectionIndex = selectedIndex
+    }
     @State private var yamlText = ""
     @State private var message: String?
     @State private var messageIsError = false
@@ -44,8 +50,13 @@ struct ConfigEditorView: View {
             bottomBar
         }
         .frame(minWidth: 720, minHeight: 480)
-        .onAppear(perform: loadFromStore)
-        .onChange(of: store.rawText) {
+        .onAppear {
+            loadFromStore()
+            if let index = initialSelectionIndex, items.indices.contains(index) {
+                selection = items[index].id
+            }
+        }
+        .onChange(of: store.rawText) { _ in
             if !formDirty && !yamlDirty { loadFromStore() }
         }
     }

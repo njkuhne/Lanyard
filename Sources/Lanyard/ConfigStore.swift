@@ -17,13 +17,13 @@ final class ConfigStore: ObservableObject {
     private var fileSource: DispatchSourceFileSystemObject?
     private var pendingReload: DispatchWorkItem?
 
-    init() {
+    init(fileURL: URL? = nil) {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        fileURL = support.appendingPathComponent("Lanyard/servers.yaml")
+        self.fileURL = fileURL ?? support.appendingPathComponent("Lanyard/servers.yaml")
         createSampleIfNeeded()
         reload()
         // Watching the folder catches editors that save by replacing the file.
-        directorySource = watch(fileURL.deletingLastPathComponent(), events: [.write, .rename, .delete])
+        directorySource = watch(self.fileURL.deletingLastPathComponent(), events: [.write, .rename, .delete])
     }
 
     func reload() {

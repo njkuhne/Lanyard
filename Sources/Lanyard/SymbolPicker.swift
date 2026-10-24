@@ -81,11 +81,17 @@ struct SymbolPicker: View {
     }
 }
 
-private struct SymbolGrid: View {
+struct SymbolGrid: View {
     @Binding var selection: String
     let defaultSymbol: String
     @Binding var isPresented: Bool
     @State private var search = ""
+
+    init(selection: Binding<String>, defaultSymbol: String, isPresented: Binding<Bool>) {
+        _selection = selection
+        self.defaultSymbol = defaultSymbol
+        _isPresented = isPresented
+    }
 
     private var current: String { selection.isEmpty ? defaultSymbol : selection }
 

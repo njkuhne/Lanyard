@@ -15,6 +15,12 @@ let package = Package(
             name: "Lanyard",
             dependencies: ["Yams"],
             path: "Sources/Lanyard"
-        )
+        ),
+        .testTarget(
+            name: "LanyardTests",
+            dependencies: ["Lanyard"],
+            path: "Tests/LanyardTests",
+            exclude: ["__Snapshots__"]
+        ),
     ]
 )
