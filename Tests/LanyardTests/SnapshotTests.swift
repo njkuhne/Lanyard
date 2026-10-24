@@ -87,6 +87,11 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(view, named: "add-server-first-run", width: 440)
     }
 
+    func testAddServerDark() {
+        let view = AddServerView(store: store(SampleConfig.starter)).background(Color(nsColor: .windowBackgroundColor))
+        assertSnapshot(view, named: "add-server-dark", width: 440, appearance: .dark)
+    }
+
     // MARK: Editor
 
     func testEditorServer() {

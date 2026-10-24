@@ -1,6 +1,15 @@
 import AppKit
 import SwiftUI
 
+/// Lanyard's greyscale accent, used instead of the system's blue.
+enum Theme {
+    static let accent = Color(nsColor: NSColor(name: "LanyardAccent") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(white: 0.62, alpha: 1)
+            : NSColor(white: 0.24, alpha: 1)
+    })
+}
+
 struct MenuContentView: View {
     @EnvironmentObject var store: ConfigStore
 
@@ -29,6 +38,7 @@ struct MenuContentView: View {
         .padding(.top, 8)
         .padding(.bottom, 4)
         .frame(width: 320)
+        .tint(Theme.accent)
     }
 }
 
@@ -199,7 +209,7 @@ struct ServiceButton: View {
                 .frame(width: 26, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(hovering ? Color.accentColor.opacity(0.22) : Color.clear)
+                        .fill(hovering ? Theme.accent.opacity(0.22) : Color.clear)
                 )
                 .contentShape(Rectangle())
         }
@@ -312,6 +322,7 @@ struct EmptyStateView: View {
 
 struct FooterView: View {
     @EnvironmentObject var store: ConfigStore
+    @AppStorage(AppearanceMode.defaultsKey) private var appearance = AppearanceMode.system.rawValue
 
     var body: some View {
         HStack {
@@ -327,6 +338,17 @@ struct FooterView: View {
                     EditorWindowController.yaml.show(store: store)
                 }
                 Divider()
+                Picker("Appearance", selection: Binding(
+                    get: { AppearanceMode(stored: appearance) },
+                    set: { mode in
+                        appearance = mode.rawValue
+                        mode.apply()
+                    }
+                )) {
+                    ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
                 Toggle("Launch at Login", isOn: Binding(
                     get: { LoginItem.isEnabled },
                     set: { LoginItem.setEnabled($0) }

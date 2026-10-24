@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Menu bar only. Info.plist sets LSUIElement for the bundled app;
         // this also hides the Dock icon when running via `swift run` or Xcode.
         NSApp.setActivationPolicy(.accessory)
+        AppearanceMode.current.apply()
         if ConfigStore.shared.createdStarterFile {
             EditorWindowController.addServer.show(store: .shared)
         }

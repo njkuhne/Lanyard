@@ -31,6 +31,7 @@ struct ConfigEditorView: View {
             )
         }
         .frame(minWidth: 720, minHeight: 480)
+        .tint(Theme.accent)
         .onAppear {
             session?.save = { [state] in state.save() }
             session?.select = { [state] in state.select(index: $0) }
@@ -258,11 +259,11 @@ struct AddServiceTile: View {
             .padding(.horizontal, 2)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(hovering ? 0.1 : 0.05))
+                    .fill(isSelected ? Theme.accent.opacity(0.18) : Color.primary.opacity(hovering ? 0.1 : 0.05))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                    .strokeBorder(isSelected ? Theme.accent : Color.clear, lineWidth: 1.5)
             )
             .contentShape(RoundedRectangle(cornerRadius: 8))
         }
@@ -463,6 +464,7 @@ struct AddServerView: View {
             }
         }
         .frame(width: 440)
+        .tint(Theme.accent)
     }
 
     private var form: some View {

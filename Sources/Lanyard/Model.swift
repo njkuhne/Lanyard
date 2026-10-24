@@ -39,6 +39,34 @@ struct Service: Identifiable {
     var bundle: String?  // the app an `app` service launches, by bundle identifier
 }
 
+/// The Appearance setting: follow the system, or force light or dark.
+enum AppearanceMode: String, CaseIterable {
+    case system, light, dark
+
+    static let defaultsKey = "appearance"
+
+    init(stored: String?) {
+        self = stored.flatMap(AppearanceMode.init(rawValue:)) ?? .system
+    }
+
+    var title: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+
+    /// The AppKit appearance to force, or nil to follow the system.
+    var appearanceName: String? {
+        switch self {
+        case .system: return nil
+        case .light: return "NSAppearanceNameAqua"
+        case .dark: return "NSAppearanceNameDarkAqua"
+        }
+    }
+}
+
 /// Line breaking for a row of service buttons: fill each line, then wrap.
 enum FlowRows {
     /// Indexes of the items on each line, given item widths and the space available.

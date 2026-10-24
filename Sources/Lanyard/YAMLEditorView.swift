@@ -42,6 +42,7 @@ struct YAMLEditorView: View {
             )
         }
         .frame(minWidth: 520, minHeight: 420)
+        .tint(Theme.accent)
         .onAppear { session?.save = { [state] in state.save() } }
         .onChange(of: state.hasUnsavedChanges) { session?.isDirty = $0 }
         .onChange(of: store.rawText) { _ in state.storeDidChange() }

@@ -23,7 +23,7 @@ struct SymbolWell: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(
-                            isPresented ? Color.accentColor : Color.primary.opacity(0.15),
+                            isPresented ? Theme.accent : Color.primary.opacity(0.15),
                             style: StrokeStyle(lineWidth: isPresented ? 2 : 1, dash: selection.isEmpty ? [4, 3] : [])
                         )
                 )
@@ -132,7 +132,7 @@ struct SymbolGrid: View {
                                             .frame(width: 40, height: 40)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 6)
-                                                    .fill(current == symbol ? Color.accentColor.opacity(0.22) : Color.clear)
+                                                    .fill(current == symbol ? Theme.accent.opacity(0.22) : Color.clear)
                                             )
                                             .contentShape(Rectangle())
                                     }

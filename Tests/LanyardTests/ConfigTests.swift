@@ -413,3 +413,15 @@ final class AppServiceTests: XCTestCase {
         XCTAssertEqual(ServiceKind.app.tileName, "App")
     }
 }
+
+final class AppearanceModeTests: XCTestCase {
+    func testStoredValues() {
+        XCTAssertEqual(AppearanceMode(stored: nil), .system)
+        XCTAssertEqual(AppearanceMode(stored: "nonsense"), .system)
+        XCTAssertEqual(AppearanceMode(stored: "dark"), .dark)
+        XCTAssertEqual(AppearanceMode.allCases.map(\.title), ["System", "Light", "Dark"])
+        XCTAssertNil(AppearanceMode.system.appearanceName)
+        XCTAssertEqual(AppearanceMode.light.appearanceName, "NSAppearanceNameAqua")
+        XCTAssertEqual(AppearanceMode.dark.appearanceName, "NSAppearanceNameDarkAqua")
+    }
+}
