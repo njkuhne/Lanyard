@@ -12,10 +12,12 @@ struct ConfigEditorView: View {
     @State private var savedItems: [EditorItem] = []
     @State private var selection: EditorItem.ID?
     private let initialSelectionIndex: Int?
+    private let session: EditorSession?
 
-    init(tab: Tab = .servers, selectedIndex: Int? = nil) {
+    init(tab: Tab = .servers, selectedIndex: Int? = nil, session: EditorSession? = nil) {
         _tab = State(initialValue: tab)
         initialSelectionIndex = selectedIndex
+        self.session = session
     }
     @State private var yamlText = ""
     @State private var message: String?
@@ -51,11 +53,13 @@ struct ConfigEditorView: View {
         }
         .frame(minWidth: 720, minHeight: 480)
         .onAppear {
+            session?.save = { save() }
             loadFromStore()
             if let index = initialSelectionIndex, items.indices.contains(index) {
                 selection = items[index].id
             }
         }
+        .onChange(of: formDirty || yamlDirty) { session?.isDirty = $0 }
         .onChange(of: store.rawText) { _ in
             if !formDirty && !yamlDirty { loadFromStore() }
         }
@@ -77,10 +81,12 @@ struct ConfigEditorView: View {
                                 .lineLimit(1)
                         }
                         .tag(item.id)
+                        .listRowSeparator(.hidden)
                     }
                     .onMove { items.move(fromOffsets: $0, toOffset: $1) }
                     .onDelete { items.remove(atOffsets: $0) }
                 }
+                .onDeleteCommand(perform: deleteSelected)
 
                 Divider()
 
@@ -104,9 +110,6 @@ struct ConfigEditorView: View {
                     .disabled(selection == nil)
 
                     Spacer()
-                    Text("Drag to reorder")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
                 }
                 .padding(8)
             }
@@ -131,8 +134,22 @@ struct ConfigEditorView: View {
             }
             .id(id)
         } else {
-            Text(items.isEmpty ? "Add a server with +" : "Select a server")
-                .foregroundStyle(.secondary)
+            if items.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.secondary)
+                    Text("No servers yet")
+                        .font(.title3)
+                    Text("Add one here, or paste a whole config into the YAML tab.")
+                        .foregroundStyle(.secondary)
+                    Button("Add Server", action: addServer)
+                        .padding(.top, 6)
+                }
+            } else {
+                Text("Select a server")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -190,6 +207,7 @@ struct ConfigEditorView: View {
                 Button("Open File…") { openFile() }
                 Spacer()
             }
+            .controlSize(.small)
         }
         .padding(12)
     }
@@ -257,8 +275,13 @@ struct ConfigEditorView: View {
             if formDirty { yamlText = EditorModel.yaml(from: items) }
         } else if yamlDirty {
             do {
+                let selectedIndex = selection.flatMap { id in items.firstIndex(where: { $0.id == id }) }
                 items = EditorModel.items(from: try ConfigParser.parse(yamlText))
-                selection = items.first?.id
+                if let selectedIndex, items.indices.contains(selectedIndex) {
+                    selection = items[selectedIndex].id
+                } else {
+                    selection = items.first?.id
+                }
             } catch {
                 show("Fix the YAML before switching: \(error.localizedDescription)", isError: true)
                 return
@@ -268,14 +291,41 @@ struct ConfigEditorView: View {
         tab = newTab
     }
 
-    private func save() {
+    /// Returns true if the config was written.
+    @discardableResult
+    private func save() -> Bool {
+        if tab == .servers && !confirmDroppingComments() { return false }
         let text = tab == .servers ? EditorModel.yaml(from: items) : yamlText
         if let error = store.save(text) {
             show(error, isError: true)
-        } else {
-            loadFromStore()
-            show("Saved", isError: false)
+            return false
         }
+        loadFromStore()
+        show("Saved", isError: false)
+        return true
+    }
+
+    private static let skipCommentWarningKey = "SkipCommentWarning"
+
+    /// The form tab rewrites the YAML from scratch, so hand-written comments are lost.
+    private func confirmDroppingComments() -> Bool {
+        let hasComments = store.rawText.split(separator: "\n").contains { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            return trimmed.hasPrefix("#") && trimmed != "# Lanyard config"
+        }
+        guard hasComments, !UserDefaults.standard.bool(forKey: Self.skipCommentWarningKey) else { return true }
+
+        let alert = NSAlert()
+        alert.messageText = "Saving here removes the comments in your config"
+        alert.informativeText = "The Servers tab rewrites servers.yaml from the form. To keep your comments, make this change in the YAML tab instead."
+        alert.addButton(withTitle: "Save Anyway")
+        alert.addButton(withTitle: "Cancel")
+        alert.showsSuppressionButton = true
+        let confirmed = alert.runModal() == .alertFirstButtonReturn
+        if confirmed && alert.suppressionButton?.state == .on {
+            UserDefaults.standard.set(true, forKey: Self.skipCommentWarningKey)
+        }
+        return confirmed
     }
 
     private func show(_ text: String, isError: Bool) {
@@ -349,37 +399,48 @@ struct ServerEditor: View {
 struct ServiceEditor: View {
     @Binding var service: EditorService
     var onDelete: () -> Void
-    @State private var showOptions = false
+    @State private var showOptions: Bool
+
+    init(service: Binding<EditorService>, startExpanded: Bool = false, onDelete: @escaping () -> Void) {
+        _service = service
+        _showOptions = State(initialValue: startExpanded)
+        self.onDelete = onDelete
+    }
 
     private var usesPath: Bool { [ServiceKind.web, .smb, .nfs, .sftp].contains(service.kind) }
     private var usesUser: Bool { [ServiceKind.smb, .vnc, .ssh, .sftp, .rdp].contains(service.kind) }
 
-    private var hasOverrides: Bool {
-        !service.port.isEmpty || !service.path.isEmpty || !service.user.isEmpty
-            || !service.label.isEmpty || !service.icon.isEmpty
-            || (service.kind == .web && !service.https)
-            || (service.kind == .custom && !service.url.isEmpty)
+    private var httpsBinding: Binding<Bool> {
+        Binding(
+            get: { service.https ?? ServiceKind.impliesHTTPS(port: Int(service.port)) },
+            set: { newValue in
+                service.https = newValue == ServiceKind.impliesHTTPS(port: Int(service.port)) ? nil : newValue
+            }
+        )
+    }
+
+    /// What the collapsed row shows, so services of the same type can be told apart.
+    private var summary: String {
+        if service.kind == .custom { return service.url }
+        var parts: [String] = []
+        let trimmed = { (s: String) in s.trimmingCharacters(in: .whitespaces) }
+        if !trimmed(service.label).isEmpty { parts.append(trimmed(service.label)) }
+        if !trimmed(service.user).isEmpty { parts.append(trimmed(service.user)) }
+        if !trimmed(service.port).isEmpty { parts.append(":" + trimmed(service.port)) }
+        if usesPath, !trimmed(service.path).isEmpty { parts.append(trimmed(service.path)) }
+        if service.kind == .web, let https = service.https { parts.append(https ? "HTTPS" : "HTTP") }
+        return parts.joined(separator: " · ")
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { showOptions.toggle() }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(showOptions ? 90 : 0))
-                        .frame(width: 12, height: 20)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(showOptions ? "Hide options" : "Show options")
-                .accessibilityLabel(showOptions ? "Hide options" : "Show options")
-
-                Image(systemName: SymbolCatalog.resolved(service.icon, fallback: service.kind.defaultSymbol))
-                    .frame(width: 18)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(showOptions ? 90 : 0))
+                    .frame(width: 12, height: 20)
+                    .accessibilityHidden(true)
                 Picker("Type", selection: $service.kind) {
                     ForEach(ServiceKind.allCases, id: \.self) { kind in
                         Text(kind.displayName).tag(kind)
@@ -387,49 +448,73 @@ struct ServiceEditor: View {
                 }
                 .labelsHidden()
                 .fixedSize()
-                Spacer()
+                Text(summary)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 8)
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
                 }
                 .buttonStyle(.borderless)
                 .help("Remove service")
             }
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation(.easeInOut(duration: 0.15)) { showOptions.toggle() } }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(showOptions ? "Hides options" : "Shows options")
 
             if showOptions {
-                VStack(alignment: .leading, spacing: 6) {
+                Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
                     if service.kind == .custom {
-                        TextField("URL", text: $service.url, prompt: Text("https://{host}:9443"))
-                            .labelsHidden()
+                        optionRow("URL") {
+                            TextField("URL", text: $service.url, prompt: Text("https://{host}:9443"))
+                        }
                     } else {
-                        HStack {
-                            TextField("Port", text: $service.port, prompt: Text("Port"))
-                                .frame(width: 80)
-                            if usesPath {
-                                TextField("Path", text: $service.path, prompt: Text("Path"))
-                            }
-                            if usesUser {
-                                TextField("User", text: $service.user, prompt: Text("User"))
-                                    .frame(width: 120)
+                        optionRow("Port") {
+                            TextField("Port", text: $service.port,
+                                      prompt: Text(service.kind.defaultPort.map(String.init) ?? ""))
+                                .frame(width: 90)
+                        }
+                        if usesPath {
+                            optionRow("Path") {
+                                TextField("Path", text: $service.path, prompt: Text("Optional"))
                             }
                         }
-                        .labelsHidden()
+                        if usesUser {
+                            optionRow("User") {
+                                TextField("User", text: $service.user, prompt: Text("Optional"))
+                            }
+                        }
                     }
-                    HStack {
-                        TextField("Label", text: $service.label, prompt: Text("Label"))
+                    optionRow("Label") {
+                        TextField("Label", text: $service.label, prompt: Text(service.kind.displayName))
+                    }
+                    optionRow("Icon") {
                         SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
                     }
-                    .labelsHidden()
                     if service.kind == .web {
-                        Toggle("Use HTTPS", isOn: $service.https)
-                            .toggleStyle(.checkbox)
+                        optionRow("HTTPS") {
+                            Toggle("Use HTTPS", isOn: httpsBinding)
+                                .toggleStyle(.checkbox)
+                        }
                     }
                 }
                 .textFieldStyle(.roundedBorder)
-                .padding(.leading, 46)
+                .labelsHidden()
+                .padding(.leading, 20)
             }
         }
         .padding(.vertical, 4)
-        .onAppear { showOptions = hasOverrides }
+    }
+
+    private func optionRow<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        GridRow {
+            Text(title)
+                .foregroundStyle(.secondary)
+                .gridColumnAlignment(.trailing)
+            content()
+        }
     }
 }
 
@@ -439,7 +524,15 @@ struct DividerEditor: View {
     var body: some View {
         Form {
             Section {
-                TextField("Title", text: $item.name, prompt: Text("Optional, e.g. Remote"))
+                Grid(alignment: .leading, horizontalSpacing: 8) {
+                    GridRow {
+                        Text("Title")
+                            .foregroundStyle(.secondary)
+                        TextField("Title", text: $item.name, prompt: Text("Optional, e.g. Remote"))
+                            .textFieldStyle(.roundedBorder)
+                            .labelsHidden()
+                    }
+                }
             } footer: {
                 Text("Leave the title empty for a plain line.")
                     .foregroundStyle(.secondary)

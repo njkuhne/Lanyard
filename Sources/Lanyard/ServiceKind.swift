@@ -21,14 +21,36 @@ enum ServiceKind: String, CaseIterable {
     var displayName: String {
         switch self {
         case .web: return "Web"
-        case .smb: return "File Sharing (SMB)"
-        case .nfs: return "File Sharing (NFS)"
-        case .vnc: return "Screen Sharing"
+        case .smb: return "SMB Share"
+        case .nfs: return "NFS Share"
+        case .vnc: return "Screen Sharing (VNC)"
         case .ssh: return "SSH"
         case .sftp: return "SFTP"
         case .rdp: return "Remote Desktop"
         case .custom: return "Link"
         }
+    }
+
+    /// The port the service uses when none is given, shown as a hint in the editor.
+    var defaultPort: Int? {
+        switch self {
+        case .web: return 443
+        case .smb: return 445
+        case .nfs: return 2049
+        case .vnc: return 5900
+        case .ssh, .sftp: return 22
+        case .rdp: return 3389
+        case .custom: return nil
+        }
+    }
+
+    /// Most self-hosted web UIs speak plain HTTP on their own port, so HTTPS is
+    /// assumed only for 443 (no port) and ports that are conventionally TLS.
+    static let tlsPorts: Set<Int> = [443, 5001, 8006, 8443, 9443, 10443, 11443]
+
+    static func impliesHTTPS(port: Int?) -> Bool {
+        guard let port else { return true }
+        return tlsPorts.contains(port)
     }
 
     /// SF Symbol shown in the menu.
@@ -48,6 +70,14 @@ enum ServiceKind: String, CaseIterable {
 extension Service {
     var symbol: String { SymbolCatalog.resolved(icon, fallback: kind.defaultSymbol) }
     var title: String { label ?? kind.displayName }
+
+    /// A labelled web link with no custom icon shows its first letter, so several
+    /// web UIs on one server don't all look like the same globe.
+    var badgeLetter: String? {
+        guard icon == nil, kind == .web || kind == .custom,
+              let first = label?.trimmingCharacters(in: .whitespaces).first else { return nil }
+        return String(first).uppercased()
+    }
 
     /// The URL handed to macOS, which routes each scheme to the right app:
     /// http(s) → browser, smb/nfs → Finder, vnc → Screen Sharing, ssh → Terminal.
@@ -71,7 +101,7 @@ extension Service {
 
         switch kind {
         case .web:
-            components.scheme = (https ?? (port != 80)) ? "https" : "http"
+            components.scheme = (https ?? ServiceKind.impliesHTTPS(port: port)) ? "https" : "http"
         case .smb:
             components.scheme = "smb"
             components.user = user

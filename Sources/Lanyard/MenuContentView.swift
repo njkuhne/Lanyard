@@ -34,7 +34,6 @@ struct MenuContentView: View {
 
 struct ServerRow: View {
     let server: Server
-    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -63,12 +62,23 @@ struct ServerRow: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(hovering ? Color.primary.opacity(0.06) : Color.clear)
-        )
         .padding(.horizontal, 6)
-        .onHover { hovering = $0 }
+        .contentShape(Rectangle())
+        .contextMenu {
+            ForEach(server.services) { service in
+                Button("Open \(service.title)") { Launcher.open(service, on: server) }
+            }
+            if !server.services.isEmpty { Divider() }
+            Button("Copy Host") { Launcher.copy(server.host) }
+            Menu("Copy Address") {
+                ForEach(server.services) { service in
+                    if let url = service.url(for: server) {
+                        Button(service.title) { Launcher.copy(url.absoluteString) }
+                    }
+                }
+            }
+            .disabled(server.services.isEmpty)
+        }
     }
 }
 
@@ -81,9 +91,17 @@ struct ServiceButton: View {
         Button {
             Launcher.open(service, on: server)
         } label: {
-            Image(systemName: service.symbol)
-                .font(.system(size: 13))
-                .frame(width: 26, height: 24)
+            Group {
+                if let letter = service.badgeLetter {
+                    LetterBadge(letter: letter)
+                } else {
+                    Image(systemName: service.symbol)
+                        .symbolRenderingMode(.monochrome)
+                        .symbolVariant(.none)
+                        .font(.system(size: 13))
+                }
+            }
+            .frame(width: 26, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
                         .fill(hovering ? Color.accentColor.opacity(0.22) : Color.clear)
@@ -93,6 +111,17 @@ struct ServiceButton: View {
         .buttonStyle(.plain)
         .help("\(service.title): \(service.url(for: server)?.absoluteString ?? "invalid address")")
         .onHover { hovering = $0 }
+    }
+}
+
+struct LetterBadge: View {
+    let letter: String
+
+    var body: some View {
+        Text(letter)
+            .font(.system(size: 9.5, weight: .bold, design: .rounded))
+            .frame(width: 16, height: 16)
+            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(lineWidth: 1.2))
     }
 }
 
@@ -123,7 +152,7 @@ struct ErrorBanner: View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.yellow)
-            Text(message)
+            Text(Self.formatted(message))
                 .font(.system(size: 11))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -133,9 +162,17 @@ struct ErrorBanner: View {
         .padding(.horizontal, 8)
         .padding(.bottom, 4)
     }
+
+    /// Error messages use `backticks` for config keys; render them as code.
+    static func formatted(_ message: String) -> AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: message, options: options)) ?? AttributedString(message)
+    }
 }
 
 struct EmptyStateView: View {
+    @EnvironmentObject var store: ConfigStore
+
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: "server.rack")
@@ -143,9 +180,11 @@ struct EmptyStateView: View {
                 .foregroundStyle(.secondary)
             Text("No servers yet")
                 .font(.headline)
-            Text("Add them with Edit Servers…")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Button("Add a Server…") {
+                Launcher.closeMenu()
+                EditorWindowController.shared.show(store: store)
+            }
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -162,20 +201,30 @@ struct FooterView: View {
                 EditorWindowController.shared.show(store: store)
             }
             .buttonStyle(.borderless)
+            .foregroundStyle(.primary)
+            .keyboardShortcut(",", modifiers: .command)
 
             Spacer()
 
             Menu {
-                Button("Copy Config to Clipboard") { store.copyToClipboard() }
-                Button("Open Config in External Editor") {
+                Button("About Lanyard") {
                     Launcher.closeMenu()
-                    store.openInEditor()
+                    NSApp.activate(ignoringOtherApps: true)
+                    NSApp.orderFrontStandardAboutPanel(nil)
                 }
                 Divider()
-                Button("Reload Config") { store.reload() }
-                Button("Show Config in Finder") {
-                    Launcher.closeMenu()
-                    store.revealInFinder()
+                Menu("Config File") {
+                    Button("Open in External Editor") {
+                        Launcher.closeMenu()
+                        store.openInEditor()
+                    }
+                    Button("Show in Finder") {
+                        Launcher.closeMenu()
+                        store.revealInFinder()
+                    }
+                    Button("Copy to Clipboard") { store.copyToClipboard() }
+                    Divider()
+                    Button("Reload") { store.reload() }
                 }
                 Divider()
                 Toggle("Launch at Login", isOn: Binding(
@@ -207,6 +256,11 @@ enum Launcher {
         if !NSWorkspace.shared.open(url) {
             NSSound.beep()
         }
+    }
+
+    static func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     static func closeMenu() {

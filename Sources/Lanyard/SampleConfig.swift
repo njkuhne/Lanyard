@@ -8,7 +8,8 @@ enum SampleConfig {
 #
 # Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, rdp, custom
 # Service options: port, path, user, https, label, icon (any SF Symbol), url
-# Web services use HTTPS unless you add `https: false` (or the port is 80).
+# Web uses HTTPS on 443 and common TLS ports (5001, 8006, 8443, 9443), HTTP on
+# any other port. Add `https: true` or `https: false` to say otherwise.
 # In a custom url, {host}, {user} and {port} are filled in for you.
 
 servers:
@@ -24,6 +25,14 @@ servers:
       - vnc: { user: admin }
       - smb: { user: admin }
       - ssh: { user: admin }
+
+  - name: Docker host
+    host: docker.local
+    services:
+      - web: { port: 9443, label: Portainer }
+      - web: { port: 3000, label: Grafana }
+      - web: { port: 8123, label: Home Assistant }
+      - ssh
 
   - divider: Remote
 

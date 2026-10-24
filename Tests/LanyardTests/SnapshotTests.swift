@@ -73,8 +73,25 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(editor(store(), selectedIndex: 1), named: "editor-server-users", width: 780, height: 540)
     }
 
+    func testEditorDockerHost() {
+        assertSnapshot(editor(store(), selectedIndex: 2), named: "editor-docker-host", width: 780, height: 540)
+    }
+
+    func testServiceOptionsExpanded() {
+        let web = EditorService(kind: .web, port: "9443", label: "Portainer")
+        let ssh = EditorService(kind: .ssh, user: "admin")
+        let form = Form {
+            Section("Services") {
+                ServiceEditor(service: .constant(web), startExpanded: true) {}
+                ServiceEditor(service: .constant(ssh), startExpanded: true) {}
+            }
+        }
+        .formStyle(.grouped)
+        assertSnapshot(form, named: "service-options", width: 560, height: 420)
+    }
+
     func testEditorDivider() {
-        assertSnapshot(editor(store(), selectedIndex: 2), named: "editor-divider", width: 780, height: 540)
+        assertSnapshot(editor(store(), selectedIndex: 3), named: "editor-divider", width: 780, height: 540)
     }
 
     func testEditorYAML() {

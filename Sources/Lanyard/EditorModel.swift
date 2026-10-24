@@ -7,7 +7,7 @@ struct EditorService: Identifiable, Equatable {
     var port = ""
     var path = ""
     var user = ""
-    var https = true
+    var https: Bool?  // nil follows the port: HTTPS on 443 and common TLS ports
     var label = ""
     var icon = ""
     var url = ""
@@ -45,7 +45,7 @@ enum EditorModel {
                             port: s.port.map { String($0) } ?? "",
                             path: s.path ?? "",
                             user: s.user ?? "",
-                            https: s.https ?? (s.port != 80),
+                            https: s.https == ServiceKind.impliesHTTPS(port: s.port) ? nil : s.https,
                             label: s.label ?? "",
                             icon: s.icon == s.kind.defaultSymbol ? "" : (s.icon ?? ""),
                             url: s.url ?? ""
@@ -93,8 +93,7 @@ enum EditorModel {
             add("port", s.port)
             add("path", s.path)
             add("user", s.user)
-            let impliedHTTPS = s.port.trimmingCharacters(in: .whitespaces) != "80"
-            if s.kind == .web && s.https != impliedHTTPS { options.append("https: \(s.https)") }
+            if s.kind == .web, let https = s.https { options.append("https: \(https)") }
         }
         add("label", s.label)
         add("icon", s.icon)
