@@ -131,10 +131,11 @@ final class EditorStateTests: XCTestCase {
         let state = EditorState(store: store(), prompts: prompts)
         var item = state.items[0]
         item.host = ""
+        item.services = [EditorService(kind: .ssh)]
         state.update(item)
         XCTAssertFalse(state.save())
         XCTAssertTrue(state.messageIsError)
-        XCTAssertEqual(state.message, "Not saved. A: needs an `address:`")
+        XCTAssertEqual(state.message, "Not saved. A: SSH needs an address, since the server doesn't have one")
     }
 
     func testHasComments() {
@@ -166,7 +167,7 @@ final class EditorStateTests: XCTestCase {
         XCTAssertEqual(state.text, s.rawText)
         XCTAssertFalse(state.hasUnsavedChanges)
 
-        state.text = "servers:\n  - name: Z\n"
+        state.text = "servers:\n  - icon: cpu\n"
         XCTAssertFalse(state.save())
         XCTAssertTrue(state.messageIsError)
 
@@ -232,6 +233,20 @@ final class EditorStateTests: XCTestCase {
         XCTAssertFalse(state.canAdd)
         state.address = " nas.lan "
         XCTAssertFalse(state.canAdd, "needs at least one service")
+        state.address = ""
+        state.toggle(.web)
+        XCTAssertFalse(state.canAdd, "no address: needs a name and a web address")
+        state.name = "Cloud"
+        XCTAssertFalse(state.canAdd)
+        state.webAddress = "https://dash.example.com"
+        XCTAssertTrue(state.canAdd)
+        state.toggle(.ssh)
+        XCTAssertFalse(state.canAdd, "SSH would have nothing to open")
+        state.toggle(.ssh)
+        state.toggle(.web)
+        state.name = ""
+        state.webAddress = ""
+        state.address = " nas.lan "
         state.toggle(.web)
         state.toggle(.smb)
         state.toggle(.ssh)

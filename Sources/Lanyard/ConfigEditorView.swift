@@ -27,7 +27,8 @@ struct ConfigEditorView: View {
                 messageIsError: state.messageIsError,
                 hasUnsavedChanges: state.hasUnsavedChanges,
                 revert: state.revert,
-                save: { state.save() }
+                save: { state.save() },
+                editYAML: { [store] in EditorWindowController.yaml.show(store: store) }
             )
         }
         .frame(minWidth: 720, minHeight: 480)
@@ -111,7 +112,7 @@ struct ConfigEditorView: View {
                     .foregroundStyle(.secondary)
                 Text("No servers yet")
                     .font(.title3)
-                Text("Add one here, or paste a whole config with Edit YAML… in the menu.")
+                Text("Add one here, or paste a whole config with Edit YAML… below.")
                     .foregroundStyle(.secondary)
                 Button("Add Server", action: state.addServer)
                     .padding(.top, 6)
@@ -135,9 +136,14 @@ struct EditorBottomBar: View {
     let hasUnsavedChanges: Bool
     let revert: () -> Void
     let save: () -> Void
+    /// Shown in the Edit Servers window only: opens the raw file in its own window.
+    var editYAML: (() -> Void)?
 
     var body: some View {
         HStack {
+            if let editYAML {
+                Button("Edit YAML…", action: editYAML)
+            }
             if let message {
                 Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(messageIsError ? Color.orange : Color.green)
@@ -177,7 +183,7 @@ struct ServerEditor: View {
                         GridRow {
                             Text("Address")
                                 .foregroundStyle(.secondary)
-                            TextField("Address", text: $item.host, prompt: Text("nas.local or 192.168.1.10"))
+                            TextField("Address", text: $item.host, prompt: Text("nas.local, or leave empty"))
                         }
                     }
                     .textFieldStyle(.roundedBorder)
@@ -502,7 +508,7 @@ struct AddServerView: View {
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
                 GridRow {
                     Text("Address").foregroundStyle(.secondary).gridColumnAlignment(.trailing)
-                    TextField("Address", text: $state.address, prompt: Text("nas.local or 192.168.1.10"))
+                    TextField("Address", text: $state.address, prompt: Text("nas.local, or leave empty"))
                 }
                 GridRow {
                     Text("Name").foregroundStyle(.secondary)

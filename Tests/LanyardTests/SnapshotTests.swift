@@ -53,7 +53,7 @@ final class SnapshotTests: XCTestCase {
 
     func testMenuWithConfigError() {
         let store = store()
-        try? "servers:\n  - name: Broken\n".write(to: store.fileURL, atomically: true, encoding: .utf8)
+        try? "servers:\n  - name: Broken\n    services: [ssh]\n".write(to: store.fileURL, atomically: true, encoding: .utf8)
         store.reload()
         assertSnapshot(menu(store), named: "menu-error", width: 320)
     }

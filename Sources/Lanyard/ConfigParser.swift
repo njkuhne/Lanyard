@@ -59,7 +59,7 @@ enum ConfigParser {
             }
 
             guard let fields = dict(item) else {
-                throw ConfigError("\(position) should be a server (with `name:` and `address:`) or `- divider`")
+                throw ConfigError("\(position) should be a server (with a `name:` or `address:`) or `- divider`")
             }
 
             if fields.keys.contains("divider") {
@@ -67,11 +67,14 @@ enum ConfigParser {
                 continue
             }
 
-            // `host:` is the older name for `address:`.
-            guard let host = string(fields["address"]) ?? string(fields["host"]), !host.isEmpty else {
-                throw ConfigError("\(string(fields["name"]) ?? position): needs an `address:`")
+            // `host:` is the older name for `address:`. The address is optional when
+            // every service says where it opens; then the server needs a name.
+            let host = (string(fields["address"]) ?? string(fields["host"]) ?? "").trimmingCharacters(in: .whitespaces)
+            let givenName = string(fields["name"])?.trimmingCharacters(in: .whitespaces) ?? ""
+            guard !givenName.isEmpty || !host.isEmpty else {
+                throw ConfigError("\(position): needs a `name:` or an `address:`")
             }
-            let name = string(fields["name"]) ?? host
+            let name = givenName.isEmpty ? host : givenName
 
             var services: [Service] = []
             if let raw = fields["services"], !(raw is NSNull) {
@@ -147,16 +150,21 @@ enum ConfigParser {
             throw ConfigError("\(server): a service shows either an `icon:` or a `badge:`, not both")
         }
 
-        let service = Service(
+        let label = string(options["name"]) ?? string(options["label"])
+        let url = string(options["url"]) ?? legacyURL(kind: kind, typeName: typeName, host: host, options: options)
+        if host.isEmpty, kind != .app, (url ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+            throw ConfigError("\(server): \(label ?? kind.displayName) needs an address, since the server doesn't have one")
+        }
+
+        return Service(
             id: nextID(),
             kind: kind,
-            label: string(options["name"]) ?? string(options["label"]),
+            label: label,
             icon: string(options["icon"]),
-            url: string(options["url"]) ?? legacyURL(kind: kind, typeName: typeName, host: host, options: options),
+            url: url,
             badge: badge,
             bundle: bundle
         )
-        return service
     }
 
     /// Older configs spelled out port, path, user and https; fold them into one URL.
@@ -168,7 +176,7 @@ enum ConfigParser {
         let user = string(options["user"])
         var https = bool(options["https"]) ?? bool(options["secure"])
         if typeName.lowercased() == "http" { https = https ?? false }
-        guard port != nil || path != nil || user != nil || https != nil else { return nil }
+        guard !host.isEmpty, port != nil || path != nil || user != nil || https != nil else { return nil }
 
         let tlsPorts: Set<Int> = [443, 5001, 8006, 8443, 9443, 10443, 11443]
         var text = kind == .web ? ((https ?? port.map(tlsPorts.contains) ?? true) ? "https" : "http") : scheme

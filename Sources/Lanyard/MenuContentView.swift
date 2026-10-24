@@ -48,9 +48,9 @@ struct ServerRow: View {
     let server: Server
     let index: Int
 
-    private var showAddresses: Bool { server.showAddress }
+    private var showAddresses: Bool { server.showsAddressLine }
     private var showServerIcons: Bool { server.showIcon }
-    private var singleLine: Bool { !server.showAddress }
+    private var singleLine: Bool { !server.showsAddressLine }
 
     var body: some View {
         // Everything on one line when it fits; otherwise the name gets its own
@@ -77,7 +77,7 @@ struct ServerRow: View {
                 }
             }
         }
-        .help("\(server.name) — \(server.host)")
+        .help(server.tooltip)
         .padding(.horizontal, 8)
         .padding(.vertical, singleLine ? 3 : 5)
         .frame(minHeight: singleLine ? 26 : nil)
@@ -88,7 +88,9 @@ struct ServerRow: View {
                 Button("Open \(service.title)") { Launcher.open(service, on: server) }
             }
             if !server.services.isEmpty { Divider() }
-            Button("Copy Address") { Launcher.copy(server.host) }
+            if server.hasAddress {
+                Button("Copy Address") { Launcher.copy(server.host) }
+            }
             Menu("Copy Service Link") {
                 ForEach(server.services) { service in
                     if let url = service.url(for: server) {
@@ -216,7 +218,7 @@ struct ServiceButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("\(service.title): \(service.url(for: server)?.absoluteString ?? server.host)")
+        .help("\(service.title): \(service.url(for: server)?.absoluteString ?? server.name)")
         .onHover { hovering = $0 }
     }
 }
@@ -347,10 +349,6 @@ struct FooterView: View {
                     EditorWindowController.servers.show(store: store)
                 }
                 .keyboardShortcut(",", modifiers: .command)
-                Button("Edit YAML…") {
-                    Launcher.closeMenu()
-                    EditorWindowController.yaml.show(store: store)
-                }
                 Divider()
                 Picker("Appearance", selection: Binding(
                     get: { AppearanceMode(stored: appearance) },

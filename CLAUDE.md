@@ -111,12 +111,12 @@ Three kinds of code, held to different bars:
   handed to `NSWorkspace.open`, which routes it to the right app. An `app`
   service launches a Mac app by bundle ID instead.
 - `MenuContentView.swift` — the dropdown: server rows, service icon buttons,
-  dividers, error banner, and a gear menu (Edit Servers…, Edit YAML…, Launch at Login, About, Quit).
+  dividers, error banner, and a gear menu (Edit Servers…, Appearance, Launch at Login, About, Quit).
 - `ConfigEditorView.swift` + `EditorState` — the Edit Servers window (form,
   drag to reorder, servers, dividers, services). Saving writes YAML with
   `EditorModel.yaml(from:)`, which drops comments, so it asks first.
-- `YAMLEditorView.swift` + `YAMLEditorState` — the separate Edit YAML window
-  (raw text, Import…/Export…), opened from the gear menu.
+- `YAMLEditorView.swift` + `YAMLEditorState` — the separate Edit YAML window, opened by the Edit YAML… button in Edit Servers
+  (raw text, Import…/Export…).
 - `EditorWindow.swift` — one AppKit window controller per editor, with the
   unsaved-changes prompt.
 

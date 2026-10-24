@@ -231,7 +231,14 @@ final class AddServerState: ObservableObject {
         return "https://\(host.isEmpty ? "nas.local" : host):5001"
     }
 
-    var canAdd: Bool { !address.trimmingCharacters(in: .whitespaces).isEmpty && !kinds.isEmpty }
+    /// Without an address, a server needs a name and every service must say where it
+    /// opens; here that's only the web service, with its own address filled in.
+    var canAdd: Bool {
+        guard !kinds.isEmpty else { return false }
+        if !address.trimmingCharacters(in: .whitespaces).isEmpty { return true }
+        let hasWebAddress = !webAddress.trimmingCharacters(in: .whitespaces).isEmpty
+        return !name.trimmingCharacters(in: .whitespaces).isEmpty && kinds == [.web] && hasWebAddress
+    }
 
     func toggle(_ kind: ServiceKind) {
         if kinds.contains(kind) { kinds.remove(kind) } else { kinds.insert(kind) }

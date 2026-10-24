@@ -39,8 +39,8 @@ open on it.
 <p align="center">
   <img src="docs/screenshots/first-run.png" alt="The Add Server window on first launch" width="620">
 </p>
- After that, the gear menu has **Edit Servers…** (a form) and
-**Edit YAML…** (the raw file; paste a whole setup in). Right-click a server in
+ After that, the gear menu has **Edit Servers…** (a form), and
+its **Edit YAML…** button opens the raw file in its own window (paste a whole setup in). Right-click a server in
 the menu to edit just that one, copy its address, or open any of its services.
 
 <p align="center">

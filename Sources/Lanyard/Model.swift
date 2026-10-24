@@ -26,6 +26,11 @@ struct Server: Identifiable {
     var services: [Service]
     var showAddress = true
     var showIcon = true
+
+    var hasAddress: Bool { !host.trimmingCharacters(in: .whitespaces).isEmpty }
+    /// The address line under the name: shown only when there is one and it's wanted.
+    var showsAddressLine: Bool { showAddress && hasAddress }
+    var tooltip: String { hasAddress ? "\(name) — \(host)" : name }
 }
 
 struct Service: Identifiable {

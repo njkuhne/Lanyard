@@ -114,7 +114,7 @@ enum EditorModel {
         let host = item.host.trimmingCharacters(in: .whitespaces)
         let name = item.name.trimmingCharacters(in: .whitespaces)
         var out = "  - name: \(quote(name.isEmpty ? host : name))\n"
-        out += "    address: \(quote(host))\n"
+        if !host.isEmpty { out += "    address: \(quote(host))\n" }
         if !item.icon.isEmpty { out += "    icon: \(quote(item.icon))\n" }
         if !item.showAddress { out += "    show_address: false\n" }
         if !item.showIcon { out += "    show_icon: false\n" }

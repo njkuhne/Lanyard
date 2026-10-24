@@ -87,7 +87,10 @@ extension Service {
     /// none, the server's own address opens, and a bare host gets the type's scheme.
     func url(for server: Server) -> URL? {
         let custom = url?.trimmingCharacters(in: .whitespaces) ?? ""
-        guard var text = custom.isEmpty ? kind.scheme.map({ "\($0)://\(server.host)" }) : custom else { return nil }
+        let host = server.host.trimmingCharacters(in: .whitespaces)
+        guard var text = custom.isEmpty ? (host.isEmpty ? nil : kind.scheme.map { "\($0)://\(host)" }) : custom else {
+            return nil
+        }
         if !text.contains("://"), let scheme = kind.scheme { text = "\(scheme)://\(text)" }
         return URL(string: text)
     }

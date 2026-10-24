@@ -32,9 +32,12 @@ final class ConfigParserTests: XCTestCase {
 
     func testEntryErrors() {
         XCTAssertEqual(parseError("servers:\n  - banana\n"), "Item 1 under `servers:`: unknown entry “banana”. Did you mean `- divider`?")
-        XCTAssertEqual(parseError("servers:\n  - 42\n"), "Item 1 under `servers:` should be a server (with `name:` and `address:`) or `- divider`")
-        XCTAssertEqual(parseError("servers:\n  - name: A\n"), "A: needs an `address:`")
-        XCTAssertEqual(parseError("servers:\n  - icon: cpu\n"), "Item 1 under `servers:`: needs an `address:`")
+        XCTAssertEqual(parseError("servers:\n  - 42\n"), "Item 1 under `servers:` should be a server (with a `name:` or `address:`) or `- divider`")
+        XCTAssertEqual(parseError("servers:\n  - icon: cpu\n"), "Item 1 under `servers:`: needs a `name:` or an `address:`")
+        XCTAssertEqual(parseError("servers:\n  - name: \" \"\n    address: \" \"\n"), "Item 1 under `servers:`: needs a `name:` or an `address:`")
+        XCTAssertEqual(parseError("servers:\n  - name: A\n    services: [ssh]\n"), "A: SSH needs an address, since the server doesn't have one")
+        XCTAssertEqual(parseError("servers:\n  - name: A\n    services: [{ web: 8080 }]\n"), "A: Web needs an address, since the server doesn't have one")
+        XCTAssertEqual(parseError("servers:\n  - name: A\n    services: [{ smb: { name: Media } }]\n"), "A: Media needs an address, since the server doesn't have one")
         XCTAssertEqual(parseError("servers:\n  - name: A\n    address: a\n    services: ssh\n"), "A: `services:` should be a list")
     }
 
@@ -95,6 +98,29 @@ final class ConfigParserTests: XCTestCase {
         let server = try servers("servers:\n  - { name: 42, address: 1.5, 7: x }\n")[0]
         XCTAssertEqual(server.name, "42")
         XCTAssertEqual(server.host, "1.5")
+    }
+
+    func testServerWithoutAnAddress() throws {
+        let yaml = """
+        servers:
+          - name: Cloud
+            services:
+              - web: https://dash.example.com
+              - ssh: ssh://admin@vps.example.com
+              - app: com.example.App
+        """
+        let server = try servers(yaml)[0]
+        XCTAssertEqual(server.name, "Cloud")
+        XCTAssertEqual(server.host, "")
+        XCTAssertFalse(server.hasAddress)
+        XCTAssertFalse(server.showsAddressLine)
+        XCTAssertEqual(server.tooltip, "Cloud")
+        XCTAssertEqual(server.services.map { $0.url(for: server)?.absoluteString }, ["https://dash.example.com", "ssh://admin@vps.example.com", nil])
+
+        let named = Server(id: 1, name: "NAS", host: "nas.local", services: [])
+        XCTAssertTrue(named.showsAddressLine)
+        XCTAssertEqual(named.tooltip, "NAS — nas.local")
+        XCTAssertNil(Service(id: 1, kind: .ssh).url(for: server), "nothing to open without any address")
     }
 
     func testErrorFormattingRendersCode() {
@@ -211,9 +237,9 @@ final class ConfigStoreTests: XCTestCase {
     func testBrokenFileKeepsTheLastGoodConfig() throws {
         let store = ConfigStore(fileURL: fileURL)
         _ = store.save(DemoConfig.text)
-        try "servers:\n  - name: Oops\n".write(to: fileURL, atomically: true, encoding: .utf8)
+        try "servers:\n  - name: Oops\n    services: [ssh]\n".write(to: fileURL, atomically: true, encoding: .utf8)
         store.reload()
-        XCTAssertEqual(store.errorMessage, "Oops: needs an `address:`")
+        XCTAssertEqual(store.errorMessage, "Oops: SSH needs an address, since the server doesn't have one")
         XCTAssertEqual(store.config.entries.count, 6)
     }
 
@@ -226,7 +252,7 @@ final class ConfigStoreTests: XCTestCase {
 
     func testSaveValidatesThenWrites() throws {
         let store = ConfigStore(fileURL: fileURL)
-        XCTAssertEqual(store.save("servers:\n  - name: Oops\n"), "Not saved. Oops: needs an `address:`")
+        XCTAssertEqual(store.save("servers:\n  - icon: cpu\n"), "Not saved. Item 1 under `servers:`: needs a `name:` or an `address:`")
         XCTAssertNil(store.save("servers:\n  - name: A\n    address: a\n"))
         XCTAssertEqual(try String(contentsOf: fileURL, encoding: .utf8), "servers:\n  - name: A\n    address: a\n")
         XCTAssertEqual(store.config.entries.count, 1)
