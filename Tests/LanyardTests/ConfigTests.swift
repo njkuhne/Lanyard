@@ -42,7 +42,7 @@ final class ConfigParserTests: XCTestCase {
         let prefix = "servers:\n  - name: A\n    address: a\n    services:\n      - "
         XCTAssertEqual(parseError(prefix + "{ port: 1, path: x }\n"), "A: each service needs a type, like `- ssh` or `- web: { port: 8080 }`")
         XCTAssertEqual(parseError(prefix + "[1, 2]\n"), "A: couldn't understand one of the services")
-        XCTAssertEqual(parseError(prefix + "gopher\n"), "A: unknown service “gopher”. Known types: web, smb, nfs, vnc, ssh, sftp, rdp")
+        XCTAssertEqual(parseError(prefix + "gopher\n"), "A: unknown service “gopher”. Known types: web, smb, nfs, vnc, ssh, sftp")
     }
 
     func testDividersAndDefaults() throws {
@@ -111,15 +111,7 @@ final class ServiceKindTests: XCTestCase {
         XCTAssertEqual(url(.nfs, path: "/export"), "nfs://box.lan/export")
         XCTAssertEqual(url(.vnc, user: "admin"), "vnc://admin@box.lan")
         XCTAssertEqual(url(.sftp, port: 2222, user: "nick"), "sftp://nick@box.lan:2222")
-        XCTAssertNil(url(.rdp))
         XCTAssertEqual(url(.web, path: ""), "https://box.lan")
-    }
-
-    func testRemoteDesktopUsesAnRDPFile() {
-        XCTAssertEqual(Service(id: 1, kind: .rdp).rdpFile(for: server), "full address:s:box.lan\n")
-        XCTAssertEqual(Service(id: 1, kind: .rdp, port: 3390, user: "nick").rdpFile(for: server),
-                       "full address:s:box.lan:3390\nusername:s:nick\n")
-        XCTAssertNil(Service(id: 1, kind: .ssh).rdpFile(for: server))
     }
 
     func testNamesPortsAndFields() {

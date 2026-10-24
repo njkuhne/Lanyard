@@ -1,7 +1,7 @@
 import Foundation
 
 enum ServiceKind: String, CaseIterable {
-    case web, smb, nfs, vnc, ssh, sftp, rdp
+    case web, smb, nfs, vnc, ssh, sftp
 
     /// Accepts the canonical names plus a few friendly aliases.
     init?(alias raw: String) {
@@ -12,7 +12,6 @@ enum ServiceKind: String, CaseIterable {
         case "vnc", "screensharing", "screen-sharing", "screen": self = .vnc
         case "ssh", "terminal", "shell": self = .ssh
         case "sftp": self = .sftp
-        case "rdp", "remote-desktop", "remotedesktop": self = .rdp
         default: return nil
         }
     }
@@ -25,12 +24,11 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "Screen Sharing (VNC)"
         case .ssh: return "SSH"
         case .sftp: return "SFTP"
-        case .rdp: return "Remote Desktop"
         }
     }
 
     var usesPath: Bool { [.web, .smb, .nfs, .sftp].contains(self) }
-    var usesUser: Bool { [.smb, .vnc, .ssh, .sftp, .rdp].contains(self) }
+    var usesUser: Bool { [.smb, .vnc, .ssh, .sftp].contains(self) }
 
     /// Short name for the editor's add-service tiles.
     var tileName: String {
@@ -41,7 +39,6 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "Screen Sharing"
         case .ssh: return "SSH"
         case .sftp: return "SFTP"
-        case .rdp: return "Remote Desktop"
         }
     }
 
@@ -53,7 +50,6 @@ enum ServiceKind: String, CaseIterable {
         case .nfs: return 2049
         case .vnc: return 5900
         case .ssh, .sftp: return 22
-        case .rdp: return 3389
         }
     }
 
@@ -74,7 +70,6 @@ enum ServiceKind: String, CaseIterable {
         case .vnc: return "display"
         case .ssh: return "terminal"
         case .sftp: return "arrow.up.arrow.down.circle"
-        case .rdp: return "pc"
         }
     }
 }
@@ -89,16 +84,6 @@ extension Service {
         guard icon == nil, kind == .web,
               let first = label?.trimmingCharacters(in: .whitespaces).first else { return nil }
         return String(first).uppercased()
-    }
-
-    /// Remote Desktop opens from a .rdp file, the one format Microsoft's app reliably accepts.
-    func rdpFile(for server: Server) -> String? {
-        guard kind == .rdp else { return nil }
-        var address = server.host
-        if let port { address += ":\(port)" }
-        var lines = ["full address:s:\(address)"]
-        if let user, !user.isEmpty { lines.append("username:s:\(user)") }
-        return lines.joined(separator: "\n") + "\n"
     }
 
     /// The URL handed to macOS, which routes each scheme to the right app:
@@ -139,9 +124,6 @@ extension Service {
         case .sftp:
             components.scheme = "sftp"
             components.user = user
-        case .rdp:
-            // macOS rejects Microsoft's `rdp://full%20address=s:host` form; see rdpFile(for:).
-            return nil
         }
         return components.url
     }

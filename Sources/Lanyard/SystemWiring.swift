@@ -53,15 +53,6 @@ extension ConfigStore {
 
 enum Launcher {
     static func open(_ service: Service, on server: Server) {
-        if let rdp = service.rdpFile(for: server) {
-            let name = server.host.replacingOccurrences(of: ":", with: "-")
-            let file = FileManager.default.temporaryDirectory.appendingPathComponent("\(name).rdp")
-            closeMenu()
-            if (try? rdp.write(to: file, atomically: true, encoding: .utf8)) == nil || !NSWorkspace.shared.open(file) {
-                NSSound.beep()
-            }
-            return
-        }
         guard let url = service.url(for: server) else {
             NSSound.beep()
             return

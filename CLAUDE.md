@@ -80,7 +80,7 @@ Three kinds of code, held to different bars:
   `custom`/`link` are accepted as aliases for web). A server's `address:` was
   once `host:`, which still loads; `{host}` still works in URL templates.
 - `Model.swift`, `ServiceKind.swift` — model; each service turns into a URL
-  (`http(s)`, `smb`, `nfs`, `vnc`, `ssh`, `sftp`, `rdp`, or a web `url:` template) that is
+  (`http(s)`, `smb`, `nfs`, `vnc`, `ssh`, `sftp`, or a web `url:` template) that is
   handed to `NSWorkspace.open`, which routes it to the right app.
 - `MenuContentView.swift` — the dropdown: server rows, service icon buttons,
   dividers, error banner, footer with Edit Servers… and a gear menu (Edit YAML…).
@@ -90,8 +90,7 @@ Three kinds of code, held to different bars:
 - `YAMLEditorView.swift` + `YAMLEditorState` — the separate Edit YAML window
   (raw text, Import…/Export…), opened from the gear menu.
 - `EditorWindow.swift` — one AppKit window controller per editor, with the
-  unsaved-changes prompt. Remote Desktop opens via a temporary `.rdp` file,
-  since macOS rejects Microsoft's `rdp://` URL form.
+  unsaved-changes prompt.
 
 ## Decisions (keep these)
 

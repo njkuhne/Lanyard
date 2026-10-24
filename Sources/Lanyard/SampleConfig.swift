@@ -6,7 +6,7 @@ enum SampleConfig {
 # Each server has a name, an address, and a list of services. The order here is
 # the order in the menu. Use `- divider` or `- divider: Title` to group them.
 #
-# Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, rdp
+# Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp
 # Service options: port, path, user, https, label, icon (any SF Symbol), url
 # Web uses HTTPS on 443 and common TLS ports (5001, 8006, 8443, 9443), HTTP on
 # any other port. Add `https: true` or `https: false` to say otherwise.
