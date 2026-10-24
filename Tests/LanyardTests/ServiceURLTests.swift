@@ -57,7 +57,7 @@ final class ServiceURLTests: XCTestCase {
     func testEditorWritesWebURLWithoutPortOrHTTPS() throws {
         let config = try ConfigParser.parse("servers:\n  - name: Box\n    host: box.lan\n    services:\n      - custom: { url: \"https://{host}:9443\", label: Portainer }\n")
         let yaml = EditorModel.yaml(from: EditorModel.items(from: config))
-        XCTAssertTrue(yaml.contains("- web: { url: \"https://{host}:9443\", label: Portainer }"), yaml)
+        XCTAssertTrue(yaml.contains("- web: { url: \"https://{host}:9443\", name: Portainer }"), yaml)
     }
 
     func testEditorRoundTripKeepsImplicitHTTPSOutOfYAML() throws {

@@ -11,9 +11,29 @@ struct EditorService: Identifiable, Equatable {
     var label = ""
     var icon = ""
     var url = ""
+    var badge = ""
 }
 
 extension EditorService {
+    /// The badge field: at most three characters.
+    var badgeInput: String {
+        get { badge }
+        set { badge = String(newValue.prefix(3)) }
+    }
+
+    /// The badge the dropdown will show, mirroring `Service.badgeText`.
+    var effectiveBadge: String? {
+        if !badge.isEmpty { return badge }
+        guard icon.isEmpty, kind == .web,
+              let first = label.trimmingCharacters(in: .whitespaces).first else { return nil }
+        return String(first).uppercased()
+    }
+
+    var title: String {
+        let name = label.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? kind.displayName : name
+    }
+
     var hasURL: Bool { !url.trimmingCharacters(in: .whitespaces).isEmpty }
 
     /// What the HTTPS checkbox shows. Matching the port's default clears the
@@ -50,6 +70,12 @@ struct EditorItem: Identifiable, Equatable {
         if !name.isEmpty { return name }
         return host.isEmpty ? "New Server" : host
     }
+
+    /// Another service on this server showing the same badge, which would be ambiguous in the menu.
+    func badgeClash(for service: EditorService) -> EditorService? {
+        guard let badge = service.effectiveBadge else { return nil }
+        return services.first { $0.id != service.id && $0.effectiveBadge?.lowercased() == badge.lowercased() }
+    }
 }
 
 enum EditorModel {
@@ -72,7 +98,8 @@ enum EditorModel {
                             https: s.https == ServiceKind.impliesHTTPS(port: s.port) ? nil : s.https,
                             label: s.label ?? "",
                             icon: s.icon == s.kind.defaultSymbol ? "" : (s.icon ?? ""),
-                            url: s.url ?? ""
+                            url: s.url ?? "",
+                            badge: s.badge ?? ""
                         )
                     }
                 )
@@ -81,28 +108,42 @@ enum EditorModel {
     }
 
     static func yaml(from items: [EditorItem]) -> String {
-        var out = "# Lanyard config\nservers:\n"
+        let out = "# Lanyard config\nservers:\n"
         if items.isEmpty { return out + "  []\n" }
-        for item in items {
-            if item.isDivider {
-                let title = item.name.trimmingCharacters(in: .whitespaces)
-                out += title.isEmpty ? "  - divider\n\n" : "  - divider: \(quote(title))\n\n"
-                continue
-            }
-            let host = item.host.trimmingCharacters(in: .whitespaces)
-            let name = item.name.trimmingCharacters(in: .whitespaces)
-            out += "  - name: \(quote(name.isEmpty ? host : name))\n"
-            out += "    address: \(quote(host))\n"
-            if !item.icon.isEmpty { out += "    icon: \(quote(item.icon))\n" }
-            if !item.services.isEmpty {
-                out += "    services:\n"
-                for service in item.services {
-                    out += "      - \(serviceLine(service))\n"
-                }
-            }
-            out += "\n"
+        return out + items.map(entryYAML).joined()
+    }
+
+    /// One entry under `servers:`, followed by a blank line.
+    static func entryYAML(_ item: EditorItem) -> String {
+        if item.isDivider {
+            let title = item.name.trimmingCharacters(in: .whitespaces)
+            return title.isEmpty ? "  - divider\n\n" : "  - divider: \(quote(title))\n\n"
         }
-        return out
+        let host = item.host.trimmingCharacters(in: .whitespaces)
+        let name = item.name.trimmingCharacters(in: .whitespaces)
+        var out = "  - name: \(quote(name.isEmpty ? host : name))\n"
+        out += "    address: \(quote(host))\n"
+        if !item.icon.isEmpty { out += "    icon: \(quote(item.icon))\n" }
+        if !item.services.isEmpty {
+            out += "    services:\n"
+            for service in item.services {
+                out += "      - \(serviceLine(service))\n"
+            }
+        }
+        return out + "\n"
+    }
+
+    /// Adds a server to the end of existing YAML without rewriting it, so comments survive.
+    static func appending(_ item: EditorItem, to text: String) -> String {
+        let entry = entryYAML(item)
+        guard let range = text.range(of: #"(?m)^servers:[ \t]*(\[[ \t]*\])?[ \t]*$"#, options: .regularExpression) else {
+            let separator = text.isEmpty || text.hasSuffix("\n") ? "" : "\n"
+            return text + separator + "servers:\n" + entry
+        }
+        if text[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return text[..<range.lowerBound] + "servers:\n" + entry
+        }
+        return text + (text.hasSuffix("\n") ? "" : "\n") + entry
     }
 
     private static func serviceLine(_ s: EditorService) -> String {
@@ -122,7 +163,8 @@ enum EditorModel {
         if !hasURL {
             if s.kind == .web, let https = s.https { options.append("https: \(https)") }
         }
-        add("label", s.label)
+        add("name", s.label)
+        add("badge", s.badge)
         add("icon", s.icon)
         return options.isEmpty ? s.kind.rawValue : "\(s.kind.rawValue): { \(options.joined(separator: ", ")) }"
     }

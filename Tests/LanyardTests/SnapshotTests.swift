@@ -20,7 +20,7 @@ final class SnapshotTests: XCTestCase {
         super.tearDown()
     }
 
-    private func store(_ yaml: String = SampleConfig.text) -> ConfigStore {
+    private func store(_ yaml: String = DemoConfig.text) -> ConfigStore {
         let url = directory.appendingPathComponent("servers.yaml")
         try? yaml.write(to: url, atomically: true, encoding: .utf8)
         return ConfigStore(fileURL: url)
@@ -58,6 +58,40 @@ final class SnapshotTests: XCTestCase {
         assertSnapshot(menu(store), named: "menu-error", width: 320)
     }
 
+    private static let crowded = """
+    servers:
+      - name: The Extremely Long Named Proxmox Cluster Node
+        address: pve-node-01.homelab.internal.example.com
+        services:
+    """ + (1...15).map { "\n          - web: { port: \(8000 + $0), name: App \($0), badge: A\($0) }" }.joined() + """
+
+      - name: Router
+        address: 192.168.1.1
+        services:
+          - web
+          - ssh: { badge: SSH }
+    """
+
+    func testMenuWithManyServicesAndLongNames() {
+        assertSnapshot(menu(store(Self.crowded)), named: "menu-overflow", width: 320)
+    }
+
+    func testMenuCompactWithoutAddresses() {
+        let defaults = UserDefaults.standard
+        defaults.set(false, forKey: DisplayOption.showAddresses)
+        defaults.set(false, forKey: DisplayOption.showServerIcons)
+        defer {
+            defaults.removeObject(forKey: DisplayOption.showAddresses)
+            defaults.removeObject(forKey: DisplayOption.showServerIcons)
+        }
+        assertSnapshot(menu(store()), named: "menu-compact", width: 320)
+    }
+
+    func testAddServerFirstRun() {
+        let view = AddServerView(store: store(SampleConfig.starter)).background(Color(nsColor: .windowBackgroundColor))
+        assertSnapshot(view, named: "add-server-first-run", width: 440)
+    }
+
     // MARK: Editor
 
     func testEditorServer() {
@@ -77,7 +111,7 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testServiceOptionsExpanded() {
-        let web = EditorService(kind: .web, port: "9443", label: "Grafana")
+        let web = EditorService(kind: .web, port: "9443", label: "Grafana", badge: "GF")
         let ssh = EditorService(kind: .ssh, user: "admin")
         let form = Form {
             Section("Services") {

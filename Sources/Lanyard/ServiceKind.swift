@@ -78,9 +78,11 @@ extension Service {
     var symbol: String { SymbolCatalog.resolved(icon, fallback: kind.defaultSymbol) }
     var title: String { label ?? kind.displayName }
 
-    /// A labelled web link with no custom icon shows its first letter, so several
-    /// web UIs on one server don't all look like the same globe.
-    var badgeLetter: String? {
+    /// Text shown instead of the icon: the service's own badge, or for a named
+    /// web service with no custom icon, its first letter, so several web UIs on
+    /// one server don't all look like the same globe.
+    var badgeText: String? {
+        if let badge { return badge }
         guard icon == nil, kind == .web,
               let first = label?.trimmingCharacters(in: .whitespaces).first else { return nil }
         return String(first).uppercased()

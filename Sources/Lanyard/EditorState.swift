@@ -63,6 +63,11 @@ final class EditorState: ObservableObject {
         if let index = items.firstIndex(where: { $0.id == item.id }) { items[index] = item }
     }
 
+    /// Selects the entry at a position in the config, as the dropdown's "Edit …" does.
+    func select(index: Int) {
+        if items.indices.contains(index) { selection = items[index].id }
+    }
+
     func addServer() {
         insert(EditorItem(name: "New Server"))
     }
@@ -196,5 +201,61 @@ final class YAMLEditorState: ObservableObject {
     private func show(_ text: String, isError: Bool) {
         message = text
         messageIsError = isError
+    }
+}
+
+/// The Add Server window: the quickest path to a working server, and the first-run experience.
+final class AddServerState: ObservableObject {
+    @Published var address = ""
+    @Published var name = ""
+    @Published private(set) var kinds: Set<ServiceKind> = []
+    @Published var webPort = ""
+    @Published var webName = ""
+    @Published var webBadge = "" {
+        didSet { if webBadge.count > 3 { webBadge = String(webBadge.prefix(3)) } }
+    }
+    /// The name of the server just added; the window shows a confirmation while set.
+    @Published private(set) var added: String?
+    @Published private(set) var error: String?
+
+    let store: ConfigStore
+
+    init(store: ConfigStore) {
+        self.store = store
+    }
+
+    var isFirstServer: Bool { store.config.entries.isEmpty }
+    var canAdd: Bool { !address.trimmingCharacters(in: .whitespaces).isEmpty && !kinds.isEmpty }
+
+    func toggle(_ kind: ServiceKind) {
+        if kinds.contains(kind) { kinds.remove(kind) } else { kinds.insert(kind) }
+    }
+
+    /// Appends the server to the file (keeping any comments). Returns true on success.
+    @discardableResult
+    func add() -> Bool {
+        let services = ServiceKind.allCases.filter(kinds.contains).map { kind in
+            kind == .web
+                ? EditorService(kind: .web, port: webPort, label: webName, badge: webBadge)
+                : EditorService(kind: kind)
+        }
+        let item = EditorItem(name: name, host: address.trimmingCharacters(in: .whitespaces), services: services)
+        if let failure = store.save(EditorModel.appending(item, to: store.rawText)) {
+            error = failure
+            return false
+        }
+        error = nil
+        added = item.listTitle
+        return true
+    }
+
+    func addAnother() {
+        address = ""
+        name = ""
+        kinds = []
+        webPort = ""
+        webName = ""
+        webBadge = ""
+        added = nil
     }
 }

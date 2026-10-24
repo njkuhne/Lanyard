@@ -79,6 +79,14 @@ final class EditorStateTests: XCTestCase {
         XCTAssertNil(state.selection)
     }
 
+    func testSelectByIndex() {
+        let state = EditorState(store: store(), prompts: prompts)
+        state.select(index: 1)
+        XCTAssertEqual(state.item(with: state.selection!)?.name, "B")
+        state.select(index: 7)
+        XCTAssertEqual(state.item(with: state.selection!)?.name, "B", "out of range is ignored")
+    }
+
     func testMoveRemoveAndUpdate() {
         let state = EditorState(store: store(), prompts: prompts)
         state.move(from: IndexSet(integer: 1), to: 0)
@@ -213,5 +221,51 @@ final class EditorStateTests: XCTestCase {
         state.exportFile()
         XCTAssertTrue(state.message?.hasPrefix("Couldn't export") ?? false)
         XCTAssertTrue(state.messageIsError)
+    }
+
+    // MARK: Add Server
+
+    func testAddServerFirstRun() {
+        let s = store(SampleConfig.starter)
+        let state = AddServerState(store: s)
+        XCTAssertTrue(state.isFirstServer)
+        XCTAssertFalse(state.canAdd)
+        state.address = " nas.lan "
+        XCTAssertFalse(state.canAdd, "needs at least one service")
+        state.toggle(.web)
+        state.toggle(.smb)
+        state.toggle(.ssh)
+        state.toggle(.ssh)
+        XCTAssertEqual(state.kinds, [.web, .smb])
+        state.webPort = "5001"
+        state.webName = "DSM"
+        state.webBadge = "DSMX"
+        XCTAssertEqual(state.webBadge, "DSM")
+        XCTAssertTrue(state.add())
+        XCTAssertEqual(state.added, "nas.lan")
+        XCTAssertNil(state.error)
+        XCTAssertTrue(s.rawText.hasPrefix("# Lanyard"), "comments survive")
+        guard case .server(let server) = s.config.entries.first else { return XCTFail("no server") }
+        XCTAssertEqual(server.services.map(\.kind), [.web, .smb])
+        XCTAssertEqual(server.services[0].port, 5001)
+        XCTAssertEqual(server.services[0].badge, "DSM")
+        XCTAssertFalse(state.isFirstServer)
+
+        state.addAnother()
+        XCTAssertNil(state.added)
+        XCTAssertEqual(state.address, "")
+        XCTAssertTrue(state.kinds.isEmpty)
+        XCTAssertEqual(state.webBadge, "")
+    }
+
+    func testAddServerReportsErrors() {
+        let s = store("servers:\n  - name: A\n    address: a\n  # trailing comment\n  broken: [\n")
+        let state = AddServerState(store: s)
+        state.address = "b"
+        state.name = "B"
+        state.toggle(.ssh)
+        XCTAssertFalse(state.add())
+        XCTAssertNotNil(state.error)
+        XCTAssertNil(state.added)
     }
 }

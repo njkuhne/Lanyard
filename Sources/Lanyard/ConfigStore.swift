@@ -16,6 +16,9 @@ final class ConfigStore: ObservableObject {
     private var fileSource: DispatchSourceFileSystemObject?
     private var pendingReload: DispatchWorkItem?
 
+    /// True when this launch created the config file, i.e. the first run.
+    private(set) var createdStarterFile = false
+
     /// Inside the sandbox container when sandboxed.
     static var defaultFileURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -71,7 +74,7 @@ final class ConfigStore: ObservableObject {
         let fm = FileManager.default
         guard !fm.fileExists(atPath: fileURL.path) else { return }
         try? fm.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? SampleConfig.text.write(to: fileURL, atomically: true, encoding: .utf8)
+        createdStarterFile = (try? SampleConfig.starter.write(to: fileURL, atomically: true, encoding: .utf8)) != nil
     }
 
     private func scheduleReload() {

@@ -31,7 +31,10 @@ struct ConfigEditorView: View {
             )
         }
         .frame(minWidth: 720, minHeight: 480)
-        .onAppear { session?.save = { [state] in state.save() } }
+        .onAppear {
+            session?.save = { [state] in state.save() }
+            session?.select = { [state] in state.select(index: $0) }
+        }
         .onChange(of: state.hasUnsavedChanges) { session?.isDirty = $0 }
         .onChange(of: store.rawText) { _ in state.storeDidChange() }
     }
@@ -181,15 +184,22 @@ struct ServerEditor: View {
                 .padding(.vertical, 4)
             }
 
-            Section("Services") {
+            Section {
                 if item.services.isEmpty {
                     Text("No services yet. Add one below.")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(item.services) { service in
-                    ServiceEditor(service: binding(for: service)) {
+                    ServiceEditor(service: binding(for: service), badgeClash: item.badgeClash(for: service)?.title) {
                         item.services.removeAll { $0.id == service.id }
                     }
+                }
+            } header: {
+                Text("Services")
+            } footer: {
+                if item.services.count > ServiceStrip.maxButtons {
+                    Text("The first \(ServiceStrip.maxButtons - 1) show in the menu; the rest are under +\(ServiceStrip.split(item.services.count).hidden).")
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -223,6 +233,7 @@ struct ServerEditor: View {
 
 struct AddServiceTile: View {
     let kind: ServiceKind
+    var isSelected = false
     let action: () -> Void
     @State private var hovering = false
 
@@ -244,24 +255,31 @@ struct AddServiceTile: View {
             .padding(.horizontal, 2)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.primary.opacity(hovering ? 0.1 : 0.05))
+                    .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(hovering ? 0.1 : 0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1.5)
             )
             .contentShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("Add \(kind.displayName)")
-        .accessibilityLabel("Add \(kind.displayName)")
+        .help(kind.displayName)
+        .accessibilityLabel(kind.displayName)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
 struct ServiceEditor: View {
     @Binding var service: EditorService
+    var badgeClash: String?
     var onDelete: () -> Void
     @State private var showOptions: Bool
 
-    init(service: Binding<EditorService>, startExpanded: Bool = false, onDelete: @escaping () -> Void) {
+    init(service: Binding<EditorService>, badgeClash: String? = nil, startExpanded: Bool = false, onDelete: @escaping () -> Void) {
         _service = service
+        self.badgeClash = badgeClash
         _showOptions = State(initialValue: startExpanded)
         self.onDelete = onDelete
     }
@@ -323,8 +341,26 @@ struct ServiceEditor: View {
                             TextField("User", text: $service.user, prompt: Text("Optional"))
                         }
                     }
-                    optionRow("Label") {
-                        TextField("Label", text: $service.label, prompt: Text(service.kind.displayName))
+                    optionRow("Name") {
+                        TextField("Name", text: $service.label, prompt: Text(service.kind.displayName))
+                    }
+                    optionRow("Badge") {
+                        HStack(spacing: 8) {
+                            TextField("Badge", text: $service.badgeInput, prompt: Text("1–3"))
+                                .frame(width: 60)
+                            if let badge = service.effectiveBadge {
+                                LetterBadge(text: badge)
+                            }
+                            if let badgeClash {
+                                Label("Same badge as \(badgeClash)", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            } else {
+                                Text("Shown instead of the icon")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                     optionRow("Icon") {
                         SymbolPicker(selection: $service.icon, defaultSymbol: service.kind.defaultSymbol)
@@ -376,5 +412,124 @@ struct DividerEditor: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// The Add Server window, which is also the first-run experience.
+struct AddServerView: View {
+    @StateObject private var state: AddServerState
+    private let close: () -> Void
+    private let pasteYAML: () -> Void
+
+    init(store: ConfigStore, close: @escaping () -> Void = {}, pasteYAML: @escaping () -> Void = {}) {
+        _state = StateObject(wrappedValue: AddServerState(store: store))
+        self.close = close
+        self.pasteYAML = pasteYAML
+    }
+
+    var body: some View {
+        Group {
+            if let added = state.added {
+                done(added)
+            } else {
+                form
+            }
+        }
+        .frame(width: 440)
+    }
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(state.isFirstServer ? "Add your first server" : "Add a server")
+                    .font(.title2.weight(.semibold))
+                Text("Lanyard keeps your servers one click away in the menu bar.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
+                GridRow {
+                    Text("Address").foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                    TextField("Address", text: $state.address, prompt: Text("nas.local or 192.168.1.10"))
+                }
+                GridRow {
+                    Text("Name").foregroundStyle(.secondary)
+                    TextField("Name", text: $state.name, prompt: Text("Defaults to the address"))
+                }
+            }
+            .textFieldStyle(.roundedBorder)
+            .labelsHidden()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What do you open on it?")
+                    .font(.headline)
+                HStack(spacing: 6) {
+                    ForEach(ServiceKind.allCases, id: \.self) { kind in
+                        AddServiceTile(kind: kind, isSelected: state.kinds.contains(kind)) {
+                            state.toggle(kind)
+                        }
+                    }
+                }
+            }
+
+            if state.kinds.contains(.web) {
+                Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
+                    GridRow {
+                        Text("Web port").foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                        HStack {
+                            TextField("Web port", text: $state.webPort, prompt: Text("443"))
+                                .frame(width: 80)
+                            Text("Name").foregroundStyle(.secondary)
+                            TextField("Web name", text: $state.webName, prompt: Text("Optional"))
+                            Text("Badge").foregroundStyle(.secondary)
+                            TextField("Badge", text: $state.webBadge, prompt: Text("1–3"))
+                                .frame(width: 50)
+                        }
+                    }
+                }
+                .textFieldStyle(.roundedBorder)
+                .labelsHidden()
+            }
+
+            if let error = state.error {
+                Label {
+                    Text(ConfigError.formatted(error))
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .foregroundStyle(.orange)
+                .font(.callout)
+            }
+
+            HStack {
+                Button("Paste YAML…", action: pasteYAML)
+                    .buttonStyle(.borderless)
+                Spacer()
+                Button("Add to Menu Bar") { state.add() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!state.canAdd)
+            }
+        }
+        .padding(20)
+    }
+
+    private func done(_ name: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 36))
+                .foregroundStyle(.green)
+            Text("Added \(name)")
+                .font(.title3.weight(.semibold))
+            Text("Find it in the menu bar ↑")
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("Add Another", action: state.addAnother)
+                Button("Close", action: close)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(28)
     }
 }

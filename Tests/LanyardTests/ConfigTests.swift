@@ -40,6 +40,8 @@ final class ConfigParserTests: XCTestCase {
 
     func testServiceErrors() {
         let prefix = "servers:\n  - name: A\n    address: a\n    services:\n      - "
+        XCTAssertEqual(parseError(prefix + "web: { badge: ABCD }\n"), "A: badge can be 1–3 characters (“ABCD” has 4)")
+        XCTAssertNotNil(parseError(prefix + "web: { badge: \"\" }\n"))
         XCTAssertEqual(parseError(prefix + "{ port: 1, path: x }\n"), "A: each service needs a type, like `- ssh` or `- web: { port: 8080 }`")
         XCTAssertEqual(parseError(prefix + "[1, 2]\n"), "A: couldn't understand one of the services")
         XCTAssertEqual(parseError(prefix + "gopher\n"), "A: unknown service “gopher”. Known types: web, smb, nfs, vnc, ssh, sftp")
@@ -133,10 +135,11 @@ final class ServiceKindTests: XCTestCase {
     func testTitlesSymbolsAndBadges() {
         let labelled = Service(id: 1, kind: .web, label: " grafana")
         XCTAssertEqual(labelled.title, " grafana")
-        XCTAssertEqual(labelled.badgeLetter, "G")
+        XCTAssertEqual(labelled.badgeText, "G")
+        XCTAssertEqual(Service(id: 6, kind: .ssh, badge: "SH").badgeText, "SH", "an explicit badge works for any type")
         XCTAssertEqual(labelled.symbol, "globe")
-        XCTAssertNil(Service(id: 2, kind: .web, label: "Grafana", icon: "shippingbox").badgeLetter)
-        XCTAssertNil(Service(id: 3, kind: .ssh, label: "Shell").badgeLetter)
+        XCTAssertNil(Service(id: 2, kind: .web, label: "Grafana", icon: "shippingbox").badgeText)
+        XCTAssertNil(Service(id: 3, kind: .ssh, label: "Shell").badgeText)
         XCTAssertEqual(Service(id: 4, kind: .ssh).title, "SSH")
         XCTAssertEqual(Service(id: 5, kind: .ssh, icon: "no.such.symbol").symbol, "terminal")
     }
@@ -183,11 +186,13 @@ final class ConfigStoreTests: XCTestCase {
 
     private var fileURL: URL { directory.appendingPathComponent("Lanyard/servers.yaml") }
 
-    func testCreatesTheSampleOnFirstLaunch() {
+    func testCreatesAnEmptyStarterOnFirstLaunch() {
         let store = ConfigStore(fileURL: fileURL)
-        XCTAssertEqual(store.rawText, SampleConfig.text)
+        XCTAssertEqual(store.rawText, SampleConfig.starter)
         XCTAssertNil(store.errorMessage)
-        XCTAssertEqual(store.config.entries.count, 5)
+        XCTAssertTrue(store.config.entries.isEmpty)
+        XCTAssertTrue(store.createdStarterFile)
+        XCTAssertFalse(ConfigStore(fileURL: fileURL).createdStarterFile, "only the first launch")
     }
 
     func testDefaultLocationIsApplicationSupport() {
@@ -196,6 +201,7 @@ final class ConfigStoreTests: XCTestCase {
 
     func testBrokenFileKeepsTheLastGoodConfig() throws {
         let store = ConfigStore(fileURL: fileURL)
+        _ = store.save(DemoConfig.text)
         try "servers:\n  - name: Oops\n".write(to: fileURL, atomically: true, encoding: .utf8)
         store.reload()
         XCTAssertEqual(store.errorMessage, "Oops: needs an `address:`")
@@ -267,7 +273,7 @@ final class EditorModelTests: XCTestCase {
             EditorItem(isDivider: true, name: "Remote"),
             EditorItem(name: "", host: "a.lan", icon: "cpu", services: [
                 EditorService(kind: .ssh, port: "2222", user: "root", icon: "terminal.fill"),
-                EditorService(kind: .web, label: "yes"),
+                EditorService(kind: .web, label: "yes", badge: "Y"),
             ]),
         ]
         let yaml = EditorModel.yaml(from: items)
@@ -275,7 +281,7 @@ final class EditorModelTests: XCTestCase {
         XCTAssertTrue(yaml.contains("  - divider: Remote\n"))
         XCTAssertTrue(yaml.contains("  - name: a.lan\n    address: a.lan\n    icon: cpu\n"))
         XCTAssertTrue(yaml.contains("- ssh: { port: 2222, user: root, icon: terminal.fill }"))
-        XCTAssertTrue(yaml.contains("- web: { label: \"yes\" }"), "reserved words are quoted")
+        XCTAssertTrue(yaml.contains("- web: { name: \"yes\", badge: \"Y\" }"), "reserved words are quoted")
         XCTAssertEqual(EditorModel.yaml(from: []), "# Lanyard config\nservers:\n  []\n")
         XCTAssertEqual(try ConfigParser.parse(yaml).entries.count, 3)
     }
@@ -308,5 +314,62 @@ final class EditorModelTests: XCTestCase {
     func testLoadingDropsIconsThatMatchTheDefault() throws {
         let config = try ConfigParser.parse("servers:\n  - name: A\n    address: a\n    services:\n      - web: { icon: globe }\n")
         XCTAssertEqual(EditorModel.items(from: config)[0].services[0].icon, "")
+    }
+}
+
+final class BadgeAndLayoutTests: XCTestCase {
+    func testBadgeInputIsCappedAtThree() {
+        var service = EditorService(kind: .ssh)
+        service.badgeInput = "ABCDE"
+        XCTAssertEqual(service.badgeInput, "ABC")
+    }
+
+    func testEffectiveBadgeAndTitle() {
+        XCTAssertEqual(EditorService(kind: .ssh, badge: "SH").effectiveBadge, "SH")
+        XCTAssertEqual(EditorService(kind: .web, label: "grafana").effectiveBadge, "G")
+        XCTAssertNil(EditorService(kind: .web, label: "Grafana", icon: "cpu").effectiveBadge)
+        XCTAssertNil(EditorService(kind: .ssh, label: "Shell").effectiveBadge)
+        XCTAssertEqual(EditorService(kind: .ssh, label: " Shell ").title, "Shell")
+        XCTAssertEqual(EditorService(kind: .ssh).title, "SSH")
+    }
+
+    func testBadgeClash() {
+        let grafana = EditorService(kind: .web, label: "Grafana")
+        let gitea = EditorService(kind: .web, label: "gitea")
+        let shell = EditorService(kind: .ssh)
+        let item = EditorItem(services: [grafana, gitea, shell])
+        XCTAssertEqual(item.badgeClash(for: gitea)?.id, grafana.id)
+        XCTAssertNil(item.badgeClash(for: shell))
+        XCTAssertNil(EditorItem(services: [grafana]).badgeClash(for: grafana))
+    }
+
+    func testServiceStripOverflow() {
+        XCTAssertEqual(ServiceStrip.split(0).visible, 0)
+        XCTAssertEqual(ServiceStrip.split(5).visible, 5)
+        XCTAssertEqual(ServiceStrip.split(5).hidden, 0)
+        XCTAssertEqual(ServiceStrip.split(6).visible, 4)
+        XCTAssertEqual(ServiceStrip.split(6).hidden, 2)
+        XCTAssertEqual(ServiceStrip.split(15).hidden, 11)
+    }
+
+    func testBadgesRoundTrip() throws {
+        let config = try ConfigParser.parse("servers:\n  - name: A\n    address: a\n    services:\n      - ssh: { badge: 1 }\n      - web: { label: Old }\n")
+        let items = EditorModel.items(from: config)
+        XCTAssertEqual(items[0].services[0].badge, "1")
+        XCTAssertEqual(items[0].services[1].label, "Old", "label: still loads as the name")
+        XCTAssertTrue(EditorModel.yaml(from: items).contains("- ssh: { badge: 1 }"))
+    }
+
+    func testAppendingKeepsCommentsAndHandlesEveryStartingPoint() throws {
+        let item = EditorItem(name: "NAS", host: "nas.lan", services: [EditorService(kind: .smb)])
+        let entry = "  - name: NAS\n    address: nas.lan\n    services:\n      - smb\n\n"
+        XCTAssertEqual(EditorModel.appending(item, to: "# hi\nservers: []\n"), "# hi\nservers:\n" + entry)
+        XCTAssertEqual(EditorModel.appending(item, to: "servers:"), "servers:\n" + entry)
+        XCTAssertEqual(EditorModel.appending(item, to: ""), "servers:\n" + entry)
+        XCTAssertEqual(EditorModel.appending(item, to: "# only a comment"), "# only a comment\nservers:\n" + entry)
+        let existing = "servers:\n  - name: A\n    address: a"
+        XCTAssertEqual(EditorModel.appending(item, to: existing), existing + "\n" + entry)
+        XCTAssertEqual(EditorModel.appending(item, to: existing + "\n"), existing + "\n" + entry)
+        XCTAssertEqual(try ConfigParser.parse(EditorModel.appending(item, to: SampleConfig.starter)).entries.count, 1)
     }
 }

@@ -100,7 +100,7 @@ enum ConfigParser {
     ///   - smb: /photos                    (path)
     ///   - web: https://nas.local:5001     (full URL)
     ///   - web: { port: 8080, https: true }    (HTTPS is assumed only on 443 and common TLS ports)
-    ///   - web: { url: "https://{address}:9443/admin", icon: shippingbox, label: Portainer }
+    ///   - web: { url: "https://{address}:9443/admin", icon: shippingbox, name: Portainer, badge: PT }
     private static func parseService(_ item: Any, server: String, nextID: () -> Int) throws -> Service {
         let typeName: String
         var options: [String: Any] = [:]
@@ -141,16 +141,22 @@ enum ConfigParser {
             }
         }
 
+        let badge = string(options["badge"])
+        if let badge, !(1...3).contains(badge.count) {
+            throw ConfigError("\(server): badge can be 1–3 characters (“\(badge)” has \(badge.count))")
+        }
+
         let service = Service(
             id: nextID(),
             kind: kind,
-            label: string(options["label"]) ?? string(options["name"]),
+            label: string(options["name"]) ?? string(options["label"]),
             icon: string(options["icon"]),
             port: int(options["port"]),
             path: string(options["path"]),
             user: string(options["user"]),
             https: https,
-            url: string(options["url"])
+            url: string(options["url"]),
+            badge: badge
         )
         return service
     }
