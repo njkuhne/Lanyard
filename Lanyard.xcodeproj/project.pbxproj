@@ -21,6 +21,10 @@
 		DD5AE58E8C1F449DBF2EE55C /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 30FD66F52895C73617519BA8 /* Yams */; };
 		F4845CD5CA00B6897275F59E /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1712B114E347024B86593CEB /* EditorModel.swift */; };
 		A1B2C3D4E5F60718091A2B3C /* SymbolPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6071809A1B2C3D4E5F6 /* SymbolPicker.swift */; };
+		35B9965AC2224F738E4FD9C5 /* YAMLEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1032F3EB2DC74A4DB8F060DE /* YAMLEditorView.swift */; };
+		345CD3EC81CA4C84B7C8B289 /* SystemWiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636E0C0E2E5F468CAF9E94E3 /* SystemWiring.swift */; };
+		CFAB0D439FA447BDB8FD0296 /* SymbolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300E6C5CDBE24655BBE8E231 /* SymbolCatalog.swift */; };
+		BE62905CAB534418A395CA11 /* EditorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5541137F21944C983FFF39A /* EditorState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +44,10 @@
 		E89E0607EFA239A96E89EBF4 /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		F6A56622DDECA3B66EEBFA11 /* SampleConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleConfig.swift; sourceTree = "<group>"; };
 		D4E5F6071809A1B2C3D4E5F6 /* SymbolPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolPicker.swift; sourceTree = "<group>"; };
+		1032F3EB2DC74A4DB8F060DE /* YAMLEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YAMLEditorView.swift; sourceTree = "<group>"; };
+		636E0C0E2E5F468CAF9E94E3 /* SystemWiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWiring.swift; sourceTree = "<group>"; };
+		300E6C5CDBE24655BBE8E231 /* SymbolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolCatalog.swift; sourceTree = "<group>"; };
+		A5541137F21944C983FFF39A /* EditorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +104,10 @@
 				F6A56622DDECA3B66EEBFA11 /* SampleConfig.swift */,
 				64C6110176C270D7B1DC1D40 /* ServiceKind.swift */,
 				D4E5F6071809A1B2C3D4E5F6 /* SymbolPicker.swift */,
+				1032F3EB2DC74A4DB8F060DE /* YAMLEditorView.swift */,
+				636E0C0E2E5F468CAF9E94E3 /* SystemWiring.swift */,
+				300E6C5CDBE24655BBE8E231 /* SymbolCatalog.swift */,
+				A5541137F21944C983FFF39A /* EditorState.swift */,
 			);
 			name = Lanyard;
 			path = Sources/Lanyard;
@@ -188,6 +200,10 @@
 				BC264FB3D7F6BDC5B2F4B37C /* SampleConfig.swift in Sources */,
 				BBCCAD0D2A6D4E314B94E586 /* ServiceKind.swift in Sources */,
 				A1B2C3D4E5F60718091A2B3C /* SymbolPicker.swift in Sources */,
+				35B9965AC2224F738E4FD9C5 /* YAMLEditorView.swift in Sources */,
+				345CD3EC81CA4C84B7C8B289 /* SystemWiring.swift in Sources */,
+				CFAB0D439FA447BDB8FD0296 /* SymbolCatalog.swift in Sources */,
+				BE62905CAB534418A395CA11 /* EditorState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

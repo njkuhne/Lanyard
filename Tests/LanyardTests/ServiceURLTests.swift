@@ -28,12 +28,36 @@ final class ServiceURLTests: XCTestCase {
         XCTAssertEqual(try url("http"), "http://box.lan")
     }
 
+    func testAddressAndLegacyHostKeysBothWork() throws {
+        let config = try ConfigParser.parse("servers:\n  - name: A\n    address: a.lan\n  - name: B\n    host: b.lan\n")
+        let hosts = config.entries.compactMap { entry -> String? in
+            if case .server(let server) = entry { return server.host }
+            return nil
+        }
+        XCTAssertEqual(hosts, ["a.lan", "b.lan"])
+        XCTAssertEqual(try url("web: { url: \"https://{address}:9443\" }"), "https://box.lan:9443")
+    }
+
     func testUserGoesIntoSSHURL() throws {
         XCTAssertEqual(try url("ssh: { user: admin }"), "ssh://admin@box.lan")
     }
 
     func testCustomTemplateFillsHost() throws {
         XCTAssertEqual(try url("custom: { url: \"https://{host}:9443\" }"), "https://box.lan:9443")
+    }
+
+    func testLinkAndCustomAreAliasesForWeb() throws {
+        XCTAssertEqual(try url("link: { url: \"ftp://{host}/pub\" }"), "ftp://box.lan/pub")
+    }
+
+    func testWebURLReplacesPortPathAndHTTPSRule() throws {
+        XCTAssertEqual(try url("web: { url: \"http://{host}:9443/admin\", port: 8123 }"), "http://box.lan:9443/admin")
+    }
+
+    func testEditorWritesWebURLWithoutPortOrHTTPS() throws {
+        let config = try ConfigParser.parse("servers:\n  - name: Box\n    host: box.lan\n    services:\n      - custom: { url: \"https://{host}:9443\", label: Portainer }\n")
+        let yaml = EditorModel.yaml(from: EditorModel.items(from: config))
+        XCTAssertTrue(yaml.contains("- web: { url: \"https://{host}:9443\", label: Portainer }"), yaml)
     }
 
     func testEditorRoundTripKeepsImplicitHTTPSOutOfYAML() throws {

@@ -69,8 +69,8 @@ struct ServerRow: View {
                 Button("Open \(service.title)") { Launcher.open(service, on: server) }
             }
             if !server.services.isEmpty { Divider() }
-            Button("Copy Host") { Launcher.copy(server.host) }
-            Menu("Copy Address") {
+            Button("Copy Address") { Launcher.copy(server.host) }
+            Menu("Copy Service Link") {
                 ForEach(server.services) { service in
                     if let url = service.url(for: server) {
                         Button(service.title) { Launcher.copy(url.absoluteString) }
@@ -109,7 +109,7 @@ struct ServiceButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("\(service.title): \(service.url(for: server)?.absoluteString ?? "invalid address")")
+        .help("\(service.title): \(service.url(for: server)?.absoluteString ?? server.host)")
         .onHover { hovering = $0 }
     }
 }
@@ -152,7 +152,7 @@ struct ErrorBanner: View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.yellow)
-            Text(Self.formatted(message))
+            Text(ConfigError.formatted(message))
                 .font(.system(size: 11))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -161,12 +161,6 @@ struct ErrorBanner: View {
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.yellow.opacity(0.12)))
         .padding(.horizontal, 8)
         .padding(.bottom, 4)
-    }
-
-    /// Error messages use `backticks` for config keys; render them as code.
-    static func formatted(_ message: String) -> AttributedString {
-        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return (try? AttributedString(markdown: message, options: options)) ?? AttributedString(message)
     }
 }
 
@@ -182,7 +176,7 @@ struct EmptyStateView: View {
                 .font(.headline)
             Button("Add a Server…") {
                 Launcher.closeMenu()
-                EditorWindowController.shared.show(store: store)
+                EditorWindowController.servers.show(store: store)
             }
             .padding(.top, 4)
         }
@@ -198,7 +192,7 @@ struct FooterView: View {
         HStack {
             Button("Edit Servers…") {
                 Launcher.closeMenu()
-                EditorWindowController.shared.show(store: store)
+                EditorWindowController.servers.show(store: store)
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.primary)
@@ -213,6 +207,10 @@ struct FooterView: View {
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
                 Divider()
+                Button("Edit YAML…") {
+                    Launcher.closeMenu()
+                    EditorWindowController.yaml.show(store: store)
+                }
                 Menu("Config File") {
                     Button("Open in External Editor") {
                         Launcher.closeMenu()
@@ -222,7 +220,6 @@ struct FooterView: View {
                         Launcher.closeMenu()
                         store.revealInFinder()
                     }
-                    Button("Copy to Clipboard") { store.copyToClipboard() }
                     Divider()
                     Button("Reload") { store.reload() }
                 }
@@ -243,27 +240,5 @@ struct FooterView: View {
         }
         .padding(.horizontal, 14)
         .padding(.top, 6)
-    }
-}
-
-enum Launcher {
-    static func open(_ service: Service, on server: Server) {
-        guard let url = service.url(for: server) else {
-            NSSound.beep()
-            return
-        }
-        closeMenu()
-        if !NSWorkspace.shared.open(url) {
-            NSSound.beep()
-        }
-    }
-
-    static func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
-
-    static func closeMenu() {
-        NSApp.keyWindow?.close()
     }
 }

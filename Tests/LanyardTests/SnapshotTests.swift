@@ -32,9 +32,8 @@ final class SnapshotTests: XCTestCase {
             .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private func editor(_ store: ConfigStore, tab: ConfigEditorView.Tab = .servers, selectedIndex: Int? = nil) -> some View {
-        ConfigEditorView(tab: tab, selectedIndex: selectedIndex)
-            .environmentObject(store)
+    private func editor(_ store: ConfigStore, selectedIndex: Int? = nil) -> some View {
+        ConfigEditorView(store: store, selectedIndex: selectedIndex)
             .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -78,7 +77,7 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testServiceOptionsExpanded() {
-        let web = EditorService(kind: .web, port: "9443", label: "Portainer")
+        let web = EditorService(kind: .web, port: "9443", label: "Grafana")
         let ssh = EditorService(kind: .ssh, user: "admin")
         let form = Form {
             Section("Services") {
@@ -95,7 +94,8 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testEditorYAML() {
-        assertSnapshot(editor(store(), tab: .yaml), named: "editor-yaml", width: 780, height: 540)
+        let yaml = YAMLEditorView(store: store()).background(Color(nsColor: .windowBackgroundColor))
+        assertSnapshot(yaml, named: "editor-yaml", width: 640, height: 600)
     }
 
     func testEditorEmpty() {

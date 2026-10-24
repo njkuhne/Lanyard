@@ -40,6 +40,27 @@ as screenshots of each flow (menu, editor states, icon picker, light and dark).
 `swift build` also catches APIs newer than macOS 13, which the Xcode build
 didn't until its deployment-target override was removed.
 
+## Coverage
+
+```sh
+scripts/coverage.sh   # runs the tests; fails unless every logic file is at 100% line coverage
+```
+
+Three kinds of code, held to different bars:
+
+- **Logic, 100% line coverage:** `ConfigParser`, `ConfigStore`, `EditorModel`,
+  `EditorState`, `Model`, `ServiceKind`, `SymbolCatalog`. Keep decisions here
+  (and out of views) so they stay testable; add a file to `LOGIC` in the
+  script when it holds logic.
+- **Views, snapshot-tested:** `MenuContentView`, `ConfigEditorView`,
+  `YAMLEditorView`, `SymbolPicker`. Their bodies render in the snapshot tests;
+  button actions are one-line calls into the logic above.
+- **System wiring, excluded:** `LanyardApp` (`@main`), `EditorWindow` (NSWindow
+  and the save prompt), `LoginItem` (SMAppService), `SystemWiring` (alerts, file
+  panels, NSWorkspace, pasteboard, `Launcher`). These only do anything with a
+  person at the screen; the logic deciding when to call them is tested through
+  `EditorPrompts` fakes.
+
 ## Project status
 
 - v0.1 was written without ever being compiled. **First job: get a clean build.**
@@ -55,16 +76,22 @@ didn't until its deployment-target override was removed.
   validates before every save, keeps the last good config if the file is broken.
 - `ConfigParser.swift` — YAML → model via Yams, with human-readable errors.
   Services accept several shorthand forms (`- ssh`, `- web: 8080`,
-  `- web: { port: 5001, https: true }`, `- custom: { url: "…{host}…" }`).
+  `- web: { port: 5001, https: true }`, `- web: { url: "…{address}…" }`;
+  `custom`/`link` are accepted as aliases for web). A server's `address:` was
+  once `host:`, which still loads; `{host}` still works in URL templates.
 - `Model.swift`, `ServiceKind.swift` — model; each service turns into a URL
-  (`http(s)`, `smb`, `nfs`, `vnc`, `ssh`, `sftp`, `rdp`, or custom) that is
+  (`http(s)`, `smb`, `nfs`, `vnc`, `ssh`, `sftp`, `rdp`, or a web `url:` template) that is
   handed to `NSWorkspace.open`, which routes it to the right app.
 - `MenuContentView.swift` — the dropdown: server rows, service icon buttons,
-  dividers, error banner, footer with Edit Servers… and a gear menu.
-- `ConfigEditorView.swift`, `EditorModel.swift`, `EditorWindow.swift` — the
-  editor window: a **Servers** tab (form, drag to reorder, add servers,
-  dividers, services) and a **YAML** tab (raw text you can paste in and save).
-  The form tab writes YAML back out with `EditorModel.yaml(from:)`, which drops comments.
+  dividers, error banner, footer with Edit Servers… and a gear menu (Edit YAML…).
+- `ConfigEditorView.swift` + `EditorState` — the Edit Servers window (form,
+  drag to reorder, servers, dividers, services). Saving writes YAML with
+  `EditorModel.yaml(from:)`, which drops comments, so it asks first.
+- `YAMLEditorView.swift` + `YAMLEditorState` — the separate Edit YAML window
+  (raw text, Import…/Export…), opened from the gear menu.
+- `EditorWindow.swift` — one AppKit window controller per editor, with the
+  unsaved-changes prompt. Remote Desktop opens via a temporary `.rdp` file,
+  since macOS rejects Microsoft's `rdp://` URL form.
 
 ## Decisions (keep these)
 
@@ -80,7 +107,7 @@ didn't until its deployment-target override was removed.
 
 ## Ideas not built yet
 
-- `afp` and `ftp` as first-class service types (work today as `custom`).
+- `afp` and `ftp` as first-class service types (work today as a web `url:`).
 - Multiple addresses per server (LAN / Tailscale / external).
 - Reachability dot per server.
 - Keyboard navigation in the dropdown; global hotkey to open it.

@@ -3,31 +3,32 @@ enum SampleConfig {
 # Lanyard — your servers, one click away.
 # Changes are picked up automatically when you save this file.
 #
-# Each server has a name, a host, and a list of services. The order here is
+# Each server has a name, an address, and a list of services. The order here is
 # the order in the menu. Use `- divider` or `- divider: Title` to group them.
 #
-# Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, rdp, custom
+# Service types: web, smb, nfs, vnc (Screen Sharing), ssh, sftp, rdp
 # Service options: port, path, user, https, label, icon (any SF Symbol), url
 # Web uses HTTPS on 443 and common TLS ports (5001, 8006, 8443, 9443), HTTP on
 # any other port. Add `https: true` or `https: false` to say otherwise.
-# In a custom url, {host}, {user} and {port} are filled in for you.
+# Give web a full `url` for anything else (another scheme, path or host);
+# {address}, {user} and {port} are filled in for you.
 
 servers:
   - name: NAS
-    host: nas.local
+    address: nas.local
     services:
       - web: 5001
       - smb
 
   - name: Mac mini
-    host: mac-mini.local
+    address: mac-mini.local
     services:
       - vnc: { user: admin }
       - smb: { user: admin }
       - ssh: { user: admin }
 
   - name: Docker host
-    host: docker.local
+    address: docker.local
     services:
       - web: { port: 9443, label: Portainer }
       - web: { port: 3000, label: Grafana }
@@ -37,10 +38,10 @@ servers:
   - divider: Remote
 
   - name: VPS
-    host: example.com
+    address: example.com
     services:
       - ssh: { user: root }
-      - custom: { url: "https://{host}:9443", icon: shippingbox, label: Portainer }
+      - web: { url: "https://{address}:9443", icon: shippingbox, label: Portainer }
 
 """
 }

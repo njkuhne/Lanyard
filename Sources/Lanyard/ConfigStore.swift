@@ -1,6 +1,5 @@
-import AppKit
+import Combine
 import Foundation
-import UniformTypeIdentifiers
 
 /// Owns servers.yaml in Application Support: creates a sample on first launch,
 /// parses it, and reloads automatically whenever it changes on disk.
@@ -17,9 +16,14 @@ final class ConfigStore: ObservableObject {
     private var fileSource: DispatchSourceFileSystemObject?
     private var pendingReload: DispatchWorkItem?
 
-    init(fileURL: URL? = nil) {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        self.fileURL = fileURL ?? support.appendingPathComponent("Lanyard/servers.yaml")
+    /// Inside the sandbox container when sandboxed.
+    static var defaultFileURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Lanyard/servers.yaml")
+    }
+
+    init(fileURL: URL = ConfigStore.defaultFileURL) {
+        self.fileURL = fileURL
         createSampleIfNeeded()
         reload()
         // Watching the folder catches editors that save by replacing the file.
@@ -44,45 +48,6 @@ final class ConfigStore: ObservableObject {
         fileSource = watch(fileURL, events: [.write, .extend, .rename, .delete])
     }
 
-    func openInEditor() {
-        if !NSWorkspace.shared.open(fileURL) {
-            let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
-            NSWorkspace.shared.open([fileURL], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
-        }
-    }
-
-    /// Replaces the config with YAML from the clipboard, but only if it parses.
-    func pasteFromClipboard() {
-        guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else {
-            errorMessage = "The clipboard doesn't have any text in it."
-            return
-        }
-        replaceConfig(with: text, source: "The clipboard")
-    }
-
-    /// Replaces the config with a YAML file the user picks, but only if it parses.
-    func importFromFile() {
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.title = "Import Lanyard Config"
-        panel.allowedContentTypes = [.yaml, .plainText]
-        panel.allowsOtherFileTypes = true
-        panel.canChooseDirectories = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let text = try String(contentsOf: url, encoding: .utf8)
-            replaceConfig(with: text, source: url.lastPathComponent)
-        } catch {
-            errorMessage = "Couldn't read \(url.lastPathComponent): \(error.localizedDescription)"
-        }
-    }
-
-    func copyToClipboard() {
-        guard let text = try? String(contentsOf: fileURL, encoding: .utf8) else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
-
     /// Validates, then saves. Returns a human-readable error, or nil on success.
     @discardableResult
     func save(_ text: String) -> String? {
@@ -100,17 +65,7 @@ final class ConfigStore: ObservableObject {
         return nil
     }
 
-    func revealInFinder() {
-        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-    }
-
     // MARK: - Private
-
-    private func replaceConfig(with text: String, source: String) {
-        if let error = save(text) {
-            errorMessage = "\(source): \(error)"
-        }
-    }
 
     private func createSampleIfNeeded() {
         let fm = FileManager.default

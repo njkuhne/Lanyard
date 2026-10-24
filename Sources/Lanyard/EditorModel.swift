@@ -13,6 +13,30 @@ struct EditorService: Identifiable, Equatable {
     var url = ""
 }
 
+extension EditorService {
+    var hasURL: Bool { !url.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// What the HTTPS checkbox shows. Matching the port's default clears the
+    /// override, so the YAML only says `https:` when it differs from the default.
+    var usesHTTPS: Bool {
+        get { https ?? ServiceKind.impliesHTTPS(port: Int(port)) }
+        set { https = newValue == ServiceKind.impliesHTTPS(port: Int(port)) ? nil : newValue }
+    }
+
+    /// What a collapsed row shows, so services of the same type can be told apart.
+    var summary: String {
+        let trimmed = { (s: String) in s.trimmingCharacters(in: .whitespaces) }
+        var parts: [String] = []
+        if !trimmed(label).isEmpty { parts.append(trimmed(label)) }
+        if hasURL { return (parts + [trimmed(url)]).joined(separator: " · ") }
+        if !trimmed(user).isEmpty { parts.append(trimmed(user)) }
+        if !trimmed(port).isEmpty { parts.append(":" + trimmed(port)) }
+        if kind.usesPath, !trimmed(path).isEmpty { parts.append(trimmed(path)) }
+        if kind == .web, let https { parts.append(https ? "HTTPS" : "HTTP") }
+        return parts.joined(separator: " · ")
+    }
+}
+
 struct EditorItem: Identifiable, Equatable {
     var id = UUID()
     var isDivider = false
@@ -68,7 +92,7 @@ enum EditorModel {
             let host = item.host.trimmingCharacters(in: .whitespaces)
             let name = item.name.trimmingCharacters(in: .whitespaces)
             out += "  - name: \(quote(name.isEmpty ? host : name))\n"
-            out += "    host: \(quote(host))\n"
+            out += "    address: \(quote(host))\n"
             if !item.icon.isEmpty { out += "    icon: \(quote(item.icon))\n" }
             if !item.services.isEmpty {
                 out += "    services:\n"
@@ -88,11 +112,14 @@ enum EditorModel {
             guard !v.isEmpty else { return }
             options.append("\(key): \(Int(v) != nil ? v : quote(v))")
         }
+        let hasURL = !s.url.trimmingCharacters(in: .whitespaces).isEmpty
         add("url", s.url)
-        if s.kind != .custom {
+        if !hasURL {
             add("port", s.port)
             add("path", s.path)
-            add("user", s.user)
+        }
+        add("user", s.user)
+        if !hasURL {
             if s.kind == .web, let https = s.https { options.append("https: \(https)") }
         }
         add("label", s.label)

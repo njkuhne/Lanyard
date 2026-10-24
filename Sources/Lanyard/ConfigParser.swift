@@ -5,6 +5,17 @@ struct ConfigError: LocalizedError {
     let message: String
     init(_ message: String) { self.message = message }
     var errorDescription: String? { message }
+
+    /// Error messages use `backticks` for config keys; render them as code.
+    static func formatted(_ message: String) -> AttributedString {
+        var result = AttributedString()
+        for (index, part) in message.split(separator: "`", omittingEmptySubsequences: false).enumerated() {
+            var piece = AttributedString(part)
+            if index.isMultiple(of: 2) == false { piece.inlinePresentationIntent = .code }
+            result += piece
+        }
+        return result
+    }
 }
 
 /// Turns servers.yaml into a LanyardConfig, with error messages written for humans.
@@ -48,7 +59,7 @@ enum ConfigParser {
             }
 
             guard let fields = dict(item) else {
-                throw ConfigError("\(position) should be a server (with `name:` and `host:`) or `- divider`")
+                throw ConfigError("\(position) should be a server (with `name:` and `address:`) or `- divider`")
             }
 
             if fields.keys.contains("divider") {
@@ -56,8 +67,9 @@ enum ConfigParser {
                 continue
             }
 
-            guard let host = string(fields["host"]), !host.isEmpty else {
-                throw ConfigError("\(string(fields["name"]) ?? position): needs a `host:`")
+            // `host:` is the older name for `address:`.
+            guard let host = string(fields["address"]) ?? string(fields["host"]), !host.isEmpty else {
+                throw ConfigError("\(string(fields["name"]) ?? position): needs an `address:`")
             }
             let name = string(fields["name"]) ?? host
 
@@ -88,7 +100,7 @@ enum ConfigParser {
     ///   - smb: /photos                    (path)
     ///   - web: https://nas.local:5001     (full URL)
     ///   - web: { port: 8080, https: true }    (HTTPS is assumed only on 443 and common TLS ports)
-    ///   - { type: custom, url: "https://{host}:9443", icon: shippingbox, label: Portainer }
+    ///   - web: { url: "https://{address}:9443/admin", icon: shippingbox, label: Portainer }
     private static func parseService(_ item: Any, server: String, nextID: () -> Int) throws -> Service {
         let typeName: String
         var options: [String: Any] = [:]
@@ -140,22 +152,13 @@ enum ConfigParser {
             https: https,
             url: string(options["url"])
         )
-        if kind == .custom && service.url == nil {
-            throw ConfigError("\(server): a `custom` service needs a `url:`")
-        }
         return service
     }
 
     // MARK: - Loose value helpers
 
     private static func dict(_ value: Any?) -> [String: Any]? {
-        if let d = value as? [String: Any] { return d }
-        if let d = value as? [AnyHashable: Any] {
-            var out: [String: Any] = [:]
-            for (key, val) in d { out[String(describing: key.base)] = val }
-            return out
-        }
-        return nil
+        value as? [String: Any]
     }
 
     private static func string(_ value: Any?) -> String? {

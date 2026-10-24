@@ -1,77 +1,46 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ConfigEditorView: View {
-    @EnvironmentObject var store: ConfigStore
-
-    enum Tab: Hashable { case servers, yaml }
-
-    @State private var tab: Tab
-    @State private var items: [EditorItem] = []
-    @State private var savedItems: [EditorItem] = []
-    @State private var selection: EditorItem.ID?
-    private let initialSelectionIndex: Int?
+    @ObservedObject private var store: ConfigStore
+    @StateObject private var state: EditorState
     private let session: EditorSession?
 
-    init(tab: Tab = .servers, selectedIndex: Int? = nil, session: EditorSession? = nil) {
-        _tab = State(initialValue: tab)
-        initialSelectionIndex = selectedIndex
+    init(
+        store: ConfigStore,
+        selectedIndex: Int? = nil,
+        session: EditorSession? = nil,
+        prompts: EditorPrompts = .system
+    ) {
+        self.store = store
+        _state = StateObject(wrappedValue: EditorState(store: store, selectedIndex: selectedIndex, prompts: prompts))
         self.session = session
     }
-    @State private var yamlText = ""
-    @State private var message: String?
-    @State private var messageIsError = false
-
-    private var formDirty: Bool { items != savedItems }
-    private var yamlDirty: Bool { yamlText != store.rawText }
-    private var isDirty: Bool { tab == .servers ? formDirty : yamlDirty }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: Binding(get: { tab }, set: { switchTab(to: $0) })) {
-                Text("Servers").tag(Tab.servers)
-                Text("YAML").tag(Tab.yaml)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 220)
-            .padding(.vertical, 10)
-
+            serversList
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
-
-            Group {
-                switch tab {
-                case .servers: serversTab
-                case .yaml: yamlTab
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            Divider()
-            bottomBar
+            EditorBottomBar(
+                message: state.message,
+                messageIsError: state.messageIsError,
+                hasUnsavedChanges: state.hasUnsavedChanges,
+                revert: state.revert,
+                save: { state.save() }
+            )
         }
         .frame(minWidth: 720, minHeight: 480)
-        .onAppear {
-            session?.save = { save() }
-            loadFromStore()
-            if let index = initialSelectionIndex, items.indices.contains(index) {
-                selection = items[index].id
-            }
-        }
-        .onChange(of: formDirty || yamlDirty) { session?.isDirty = $0 }
-        .onChange(of: store.rawText) { _ in
-            if !formDirty && !yamlDirty { loadFromStore() }
-        }
+        .onAppear { session?.save = { [state] in state.save() } }
+        .onChange(of: state.hasUnsavedChanges) { session?.isDirty = $0 }
+        .onChange(of: store.rawText) { _ in state.storeDidChange() }
     }
 
-    // MARK: Servers tab
-
-    private var serversTab: some View {
+    private var serversList: some View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
-                List(selection: $selection) {
-                    ForEach(items) { item in
+                List(selection: $state.selection) {
+                    ForEach(state.items) { item in
                         HStack(spacing: 8) {
                             Image(systemName: item.isDivider ? "minus" : SymbolCatalog.resolved(item.icon, fallback: "server.rack"))
                                 .foregroundStyle(.secondary)
@@ -83,17 +52,17 @@ struct ConfigEditorView: View {
                         .tag(item.id)
                         .listRowSeparator(.hidden)
                     }
-                    .onMove { items.move(fromOffsets: $0, toOffset: $1) }
-                    .onDelete { items.remove(atOffsets: $0) }
+                    .onMove(perform: state.move)
+                    .onDelete(perform: state.remove)
                 }
-                .onDeleteCommand(perform: deleteSelected)
+                .onDeleteCommand(perform: state.deleteSelected)
 
                 Divider()
 
                 HStack(spacing: 6) {
                     Menu {
-                        Button("Add Server") { addServer() }
-                        Button("Add Divider") { addDivider() }
+                        Button("Add Server", action: state.addServer)
+                        Button("Add Divider", action: state.addDivider)
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -101,13 +70,11 @@ struct ConfigEditorView: View {
                     .menuIndicator(.hidden)
                     .fixedSize()
 
-                    Button {
-                        deleteSelected()
-                    } label: {
+                    Button(action: state.deleteSelected) {
                         Image(systemName: "minus")
                     }
                     .buttonStyle(.borderless)
-                    .disabled(selection == nil)
+                    .disabled(state.selection == nil)
 
                     Spacer()
                 }
@@ -124,213 +91,64 @@ struct ConfigEditorView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let id = selection, let item = items.first(where: { $0.id == id }) {
+        if let id = state.selection, let item = state.item(with: id) {
             Group {
                 if item.isDivider {
-                    DividerEditor(item: binding(for: id))
+                    DividerEditor(item: binding(for: item))
                 } else {
-                    ServerEditor(item: binding(for: id))
+                    ServerEditor(item: binding(for: item))
                 }
             }
             .id(id)
-        } else {
-            if items.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "server.rack")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
-                    Text("No servers yet")
-                        .font(.title3)
-                    Text("Add one here, or paste a whole config into the YAML tab.")
-                        .foregroundStyle(.secondary)
-                    Button("Add Server", action: addServer)
-                        .padding(.top, 6)
-                }
-            } else {
-                Text("Select a server")
+        } else if state.items.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "server.rack")
+                    .font(.system(size: 32))
                     .foregroundStyle(.secondary)
+                Text("No servers yet")
+                    .font(.title3)
+                Text("Add one here, or paste a whole config with Edit YAML… in the menu.")
+                    .foregroundStyle(.secondary)
+                Button("Add Server", action: state.addServer)
+                    .padding(.top, 6)
             }
-        }
-    }
-
-    private func binding(for id: UUID) -> Binding<EditorItem> {
-        Binding(
-            get: { items.first(where: { $0.id == id }) ?? EditorItem() },
-            set: { newValue in
-                if let index = items.firstIndex(where: { $0.id == id }) { items[index] = newValue }
-            }
-        )
-    }
-
-    private var insertionIndex: Int {
-        if let id = selection, let index = items.firstIndex(where: { $0.id == id }) { return index + 1 }
-        return items.count
-    }
-
-    private func addServer() {
-        let item = EditorItem(name: "New Server")
-        items.insert(item, at: insertionIndex)
-        selection = item.id
-    }
-
-    private func addDivider() {
-        let item = EditorItem(isDivider: true)
-        items.insert(item, at: insertionIndex)
-        selection = item.id
-    }
-
-    private func deleteSelected() {
-        guard let id = selection, let index = items.firstIndex(where: { $0.id == id }) else { return }
-        items.remove(at: index)
-        selection = items.isEmpty ? nil : items[min(index, items.count - 1)].id
-    }
-
-    // MARK: YAML tab
-
-    private var yamlTab: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Paste or edit your config. It's checked before it's saved.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            CodeEditor(text: $yamlText)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3)))
-
-            HStack {
-                Button("Replace with Clipboard") {
-                    if let text = NSPasteboard.general.string(forType: .string) { yamlText = text }
-                }
-                Button("Copy All") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(yamlText, forType: .string)
-                }
-                Button("Open File…") { openFile() }
-                Spacer()
-            }
-            .controlSize(.small)
-        }
-        .padding(12)
-    }
-
-    private func openFile() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.yaml, .plainText]
-        panel.allowsOtherFileTypes = true
-        panel.canChooseDirectories = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        if let text = try? String(contentsOf: url, encoding: .utf8) {
-            yamlText = text
         } else {
-            show("Couldn't read \(url.lastPathComponent)", isError: true)
+            Text("Select a server")
+                .foregroundStyle(.secondary)
         }
     }
 
-    // MARK: Bottom bar
+    private func binding(for item: EditorItem) -> Binding<EditorItem> {
+        Binding(get: { state.item(with: item.id) ?? item }, set: state.update)
+    }
 
-    private var bottomBar: some View {
+}
+
+/// Revert/Save bar shared by both editor windows.
+struct EditorBottomBar: View {
+    let message: String?
+    let messageIsError: Bool
+    let hasUnsavedChanges: Bool
+    let revert: () -> Void
+    let save: () -> Void
+
+    var body: some View {
         HStack {
             if let message {
                 Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(messageIsError ? Color.orange : Color.green)
                     .font(.callout)
                     .lineLimit(3)
-            } else if tab == .servers {
-                Text("Saving from this tab rewrites the YAML, which drops comments.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
             Spacer()
-            Button("Revert") {
-                loadFromStore()
-                message = nil
-            }
-            .disabled(!formDirty && !yamlDirty)
-
-            Button("Save") { save() }
+            Button("Revert", action: revert)
+                .disabled(!hasUnsavedChanges)
+            Button("Save", action: save)
                 .keyboardShortcut("s", modifiers: .command)
                 .buttonStyle(.borderedProminent)
-                .disabled(!isDirty)
+                .disabled(!hasUnsavedChanges)
         }
         .padding(12)
-    }
-
-    // MARK: Actions
-
-    private func loadFromStore() {
-        let selectedIndex = selection.flatMap { id in items.firstIndex(where: { $0.id == id }) }
-        items = EditorModel.items(from: store.config)
-        savedItems = items
-        yamlText = store.rawText
-        if let selectedIndex, items.indices.contains(selectedIndex) {
-            selection = items[selectedIndex].id
-        } else {
-            selection = items.first?.id
-        }
-    }
-
-    private func switchTab(to newTab: Tab) {
-        guard newTab != tab else { return }
-        if newTab == .yaml {
-            // Carry unsaved form edits over to the text.
-            if formDirty { yamlText = EditorModel.yaml(from: items) }
-        } else if yamlDirty {
-            do {
-                let selectedIndex = selection.flatMap { id in items.firstIndex(where: { $0.id == id }) }
-                items = EditorModel.items(from: try ConfigParser.parse(yamlText))
-                if let selectedIndex, items.indices.contains(selectedIndex) {
-                    selection = items[selectedIndex].id
-                } else {
-                    selection = items.first?.id
-                }
-            } catch {
-                show("Fix the YAML before switching: \(error.localizedDescription)", isError: true)
-                return
-            }
-        }
-        message = nil
-        tab = newTab
-    }
-
-    /// Returns true if the config was written.
-    @discardableResult
-    private func save() -> Bool {
-        if tab == .servers && !confirmDroppingComments() { return false }
-        let text = tab == .servers ? EditorModel.yaml(from: items) : yamlText
-        if let error = store.save(text) {
-            show(error, isError: true)
-            return false
-        }
-        loadFromStore()
-        show("Saved", isError: false)
-        return true
-    }
-
-    private static let skipCommentWarningKey = "SkipCommentWarning"
-
-    /// The form tab rewrites the YAML from scratch, so hand-written comments are lost.
-    private func confirmDroppingComments() -> Bool {
-        let hasComments = store.rawText.split(separator: "\n").contains { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            return trimmed.hasPrefix("#") && trimmed != "# Lanyard config"
-        }
-        guard hasComments, !UserDefaults.standard.bool(forKey: Self.skipCommentWarningKey) else { return true }
-
-        let alert = NSAlert()
-        alert.messageText = "Saving here removes the comments in your config"
-        alert.informativeText = "The Servers tab rewrites servers.yaml from the form. To keep your comments, make this change in the YAML tab instead."
-        alert.addButton(withTitle: "Save Anyway")
-        alert.addButton(withTitle: "Cancel")
-        alert.showsSuppressionButton = true
-        let confirmed = alert.runModal() == .alertFirstButtonReturn
-        if confirmed && alert.suppressionButton?.state == .on {
-            UserDefaults.standard.set(true, forKey: Self.skipCommentWarningKey)
-        }
-        return confirmed
-    }
-
-    private func show(_ text: String, isError: Bool) {
-        message = text
-        messageIsError = isError
     }
 }
 
@@ -352,9 +170,9 @@ struct ServerEditor: View {
                             TextField("Name", text: $item.name, prompt: Text("NAS"))
                         }
                         GridRow {
-                            Text("Host")
+                            Text("Address")
                                 .foregroundStyle(.secondary)
-                            TextField("Host", text: $item.host, prompt: Text("nas.local"))
+                            TextField("Address", text: $item.host, prompt: Text("nas.local or 192.168.1.10"))
                         }
                     }
                     .textFieldStyle(.roundedBorder)
@@ -364,19 +182,26 @@ struct ServerEditor: View {
             }
 
             Section("Services") {
+                if item.services.isEmpty {
+                    Text("No services yet. Add one below.")
+                        .foregroundStyle(.secondary)
+                }
                 ForEach(item.services) { service in
                     ServiceEditor(service: binding(for: service)) {
                         item.services.removeAll { $0.id == service.id }
                     }
                 }
-                Menu("Add Service") {
+            }
+
+            Section("Add a Service") {
+                HStack(spacing: 6) {
                     ForEach(ServiceKind.allCases, id: \.self) { kind in
-                        Button(kind.displayName) {
+                        AddServiceTile(kind: kind) {
                             item.services.append(EditorService(kind: kind))
                         }
                     }
                 }
-                .fixedSize()
+                .padding(.vertical, 2)
             }
         }
         .formStyle(.grouped)
@@ -396,6 +221,40 @@ struct ServerEditor: View {
     }
 }
 
+struct AddServiceTile: View {
+    let kind: ServiceKind
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: kind.defaultSymbol)
+                    .symbolRenderingMode(.monochrome)
+                    .symbolVariant(.none)
+                    .font(.system(size: 16))
+                    .frame(height: 20)
+                Text(kind.tileName)
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .padding(.horizontal, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.primary.opacity(hovering ? 0.1 : 0.05))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help("Add \(kind.displayName)")
+        .accessibilityLabel("Add \(kind.displayName)")
+    }
+}
+
 struct ServiceEditor: View {
     @Binding var service: EditorService
     var onDelete: () -> Void
@@ -407,30 +266,6 @@ struct ServiceEditor: View {
         self.onDelete = onDelete
     }
 
-    private var usesPath: Bool { [ServiceKind.web, .smb, .nfs, .sftp].contains(service.kind) }
-    private var usesUser: Bool { [ServiceKind.smb, .vnc, .ssh, .sftp, .rdp].contains(service.kind) }
-
-    private var httpsBinding: Binding<Bool> {
-        Binding(
-            get: { service.https ?? ServiceKind.impliesHTTPS(port: Int(service.port)) },
-            set: { newValue in
-                service.https = newValue == ServiceKind.impliesHTTPS(port: Int(service.port)) ? nil : newValue
-            }
-        )
-    }
-
-    /// What the collapsed row shows, so services of the same type can be told apart.
-    private var summary: String {
-        if service.kind == .custom { return service.url }
-        var parts: [String] = []
-        let trimmed = { (s: String) in s.trimmingCharacters(in: .whitespaces) }
-        if !trimmed(service.label).isEmpty { parts.append(trimmed(service.label)) }
-        if !trimmed(service.user).isEmpty { parts.append(trimmed(service.user)) }
-        if !trimmed(service.port).isEmpty { parts.append(":" + trimmed(service.port)) }
-        if usesPath, !trimmed(service.path).isEmpty { parts.append(trimmed(service.path)) }
-        if service.kind == .web, let https = service.https { parts.append(https ? "HTTPS" : "HTTP") }
-        return parts.joined(separator: " · ")
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -441,14 +276,13 @@ struct ServiceEditor: View {
                     .rotationEffect(.degrees(showOptions ? 90 : 0))
                     .frame(width: 12, height: 20)
                     .accessibilityHidden(true)
-                Picker("Type", selection: $service.kind) {
-                    ForEach(ServiceKind.allCases, id: \.self) { kind in
-                        Text(kind.displayName).tag(kind)
-                    }
-                }
-                .labelsHidden()
-                .fixedSize()
-                Text(summary)
+                Image(systemName: SymbolCatalog.resolved(service.icon, fallback: service.kind.defaultSymbol))
+                    .symbolRenderingMode(.monochrome)
+                    .symbolVariant(.none)
+                    .frame(width: 18)
+                Text(service.kind.displayName)
+                    .fixedSize()
+                Text(service.summary)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -466,25 +300,27 @@ struct ServiceEditor: View {
 
             if showOptions {
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
-                    if service.kind == .custom {
-                        optionRow("URL") {
-                            TextField("URL", text: $service.url, prompt: Text("https://{host}:9443"))
+                    optionRow("Port") {
+                        TextField("Port", text: $service.port,
+                                  prompt: Text(service.kind.defaultPort.map(String.init) ?? ""))
+                            .frame(width: 90)
+                            .disabled(service.hasURL)
+                    }
+                    if service.kind.usesPath {
+                        optionRow("Path") {
+                            TextField("Path", text: $service.path, prompt: Text("Optional"))
+                                .disabled(service.hasURL)
                         }
-                    } else {
-                        optionRow("Port") {
-                            TextField("Port", text: $service.port,
-                                      prompt: Text(service.kind.defaultPort.map(String.init) ?? ""))
-                                .frame(width: 90)
+                    }
+                    if service.kind == .web {
+                        optionRow("Full URL") {
+                            TextField("Full URL", text: $service.url,
+                                      prompt: Text("Optional, replaces port and path, e.g. https://{address}:9443/admin"))
                         }
-                        if usesPath {
-                            optionRow("Path") {
-                                TextField("Path", text: $service.path, prompt: Text("Optional"))
-                            }
-                        }
-                        if usesUser {
-                            optionRow("User") {
-                                TextField("User", text: $service.user, prompt: Text("Optional"))
-                            }
+                    }
+                    if service.kind.usesUser {
+                        optionRow("User") {
+                            TextField("User", text: $service.user, prompt: Text("Optional"))
                         }
                     }
                     optionRow("Label") {
@@ -495,8 +331,9 @@ struct ServiceEditor: View {
                     }
                     if service.kind == .web {
                         optionRow("HTTPS") {
-                            Toggle("Use HTTPS", isOn: httpsBinding)
+                            Toggle("Use HTTPS", isOn: $service.usesHTTPS)
                                 .toggleStyle(.checkbox)
+                                .disabled(service.hasURL)
                         }
                     }
                 }
@@ -539,46 +376,5 @@ struct DividerEditor: View {
             }
         }
         .formStyle(.grouped)
-    }
-}
-
-// MARK: - Plain-text editor (no smart quotes, which would break YAML)
-
-struct CodeEditor: NSViewRepresentable {
-    @Binding var text: String
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let scrollView = NSTextView.scrollableTextView()
-        guard let textView = scrollView.documentView as? NSTextView else { return scrollView }
-        textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.isRichText = false
-        textView.allowsUndo = true
-        textView.isAutomaticQuoteSubstitutionEnabled = false
-        textView.isAutomaticDashSubstitutionEnabled = false
-        textView.isAutomaticTextReplacementEnabled = false
-        textView.isAutomaticSpellingCorrectionEnabled = false
-        textView.isContinuousSpellCheckingEnabled = false
-        textView.textContainerInset = NSSize(width: 6, height: 8)
-        textView.string = text
-        textView.delegate = context.coordinator
-        return scrollView
-    }
-
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        context.coordinator.parent = self
-        guard let textView = scrollView.documentView as? NSTextView else { return }
-        if textView.string != text { textView.string = text }
-    }
-
-    final class Coordinator: NSObject, NSTextViewDelegate {
-        var parent: CodeEditor
-        init(_ parent: CodeEditor) { self.parent = parent }
-
-        func textDidChange(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-            parent.text = textView.string
-        }
     }
 }
