@@ -1,0 +1,29 @@
+# On every push and pull request: run the tests and build an (unsigned) DMG
+# you can download from the run's Artifacts. Releases are in release.yml.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        # Snapshot images depend on the Mac's fonts and OS, so CI runs the logic tests only.
+        run: swift test --skip SnapshotTests
+
+      - name: Coverage
+        run: scripts/coverage.sh --skip SnapshotTests
+
+      - name: Build DMG
+        run: scripts/make-dmg.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lanyard-dmg
+          path: build/Lanyard-*.dmg

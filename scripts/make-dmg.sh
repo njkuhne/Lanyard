@@ -36,12 +36,29 @@ VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Co
 DMG="build/Lanyard-$VERSION.dmg"
 
 echo "==> Packaging $DMG"
+VOLUME="Lanyard $VERSION"
 STAGE="$BUILD/dmg"
-mkdir -p "$STAGE"
+RW="$BUILD/rw.dmg"
+mkdir -p "$STAGE/.background"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
+# A Retina-ready background: both sizes in one TIFF.
+tiffutil -cathidpicheck scripts/dmg/background.png scripts/dmg/background@2x.png \
+    -out "$STAGE/.background/background.tiff" >/dev/null 2>&1
+
+# Lay out the window in a writable image, then compress it.
+hdiutil detach "/Volumes/$VOLUME" -quiet 2>/dev/null || true
+hdiutil create -volname "$VOLUME" -srcfolder "$STAGE" -fs HFS+ -format UDRW -ov "$RW" >/dev/null 2>&1
+hdiutil attach "$RW" -readwrite -noverify -noautoopen -quiet 2>/dev/null
+if ! osascript scripts/dmg/layout.applescript "$VOLUME" 2>/dev/null; then
+    echo "Couldn't style the DMG window (Finder automation not allowed); it will open as a plain folder."
+fi
+rm -rf "/Volumes/$VOLUME/.fseventsd"
+sync
+hdiutil detach "/Volumes/$VOLUME" -quiet 2>/dev/null || hdiutil detach "/Volumes/$VOLUME" -force -quiet 2>/dev/null
 rm -f "$DMG"
-hdiutil create -volname "Lanyard $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+hdiutil convert "$RW" -format UDZO -imagekey zlib-level=9 -o "$DMG" >/dev/null 2>&1
+rm -f "$RW"
 
 if [ -n "${DEVELOPER_ID:-}" ]; then
     codesign --sign "$DEVELOPER_ID" --timestamp "$DMG"

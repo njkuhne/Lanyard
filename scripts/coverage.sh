@@ -6,7 +6,8 @@ cd "$(dirname "$0")/.."
 
 LOGIC="ConfigParser ConfigStore EditorModel EditorState Model ServiceKind SymbolCatalog"
 
-swift test --enable-code-coverage >/dev/null
+# Extra arguments go to `swift test`, e.g. `--skip SnapshotTests` on CI.
+swift test --enable-code-coverage "$@" >/dev/null
 JSON=$(swift test --show-codecov-path)
 PROFDATA="$(dirname "$JSON")/default.profdata"
 BIN="$(dirname "$(dirname "$JSON")")/LanyardTests.xctest/Contents/MacOS/LanyardTests"

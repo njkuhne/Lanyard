@@ -81,6 +81,10 @@ scripts/make-dmg.sh        # builds build/Lanyard-<version>.dmg
 
 ## Releasing
 
+Every push to `main` runs the tests and builds a DMG you can download from the
+run's Artifacts. The DMG opens to a window showing Lanyard and an Applications
+shortcut to drag it onto.
+
 Push a version tag and GitHub Actions builds the DMG and attaches it to the
 release:
 

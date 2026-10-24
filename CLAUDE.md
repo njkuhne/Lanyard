@@ -45,7 +45,11 @@ didn't until its deployment-target override was removed.
 `scripts/make-dmg.sh` builds a universal Release app and `build/Lanyard-<version>.dmg`
 (`VERSION=0.2.0` overrides the version). Unsigned unless `DEVELOPER_ID` is set;
 notarizes with `NOTARY_PROFILE` or `NOTARY_KEY`/`NOTARY_KEY_ID`/`NOTARY_ISSUER`.
-`.github/workflows/release.yml` runs it on `v*` tags (logic tests only on CI,
+The DMG window layout (background with arrow, icon positions) is applied by
+`scripts/dmg/layout.applescript` via Finder; if Finder automation is refused it
+falls back to a plain folder window. `scripts/dmg/background.svg` is the source
+for the committed 1x/2x PNGs. `.github/workflows/ci.yml` runs tests, coverage
+and a DMG on every push to main and on PRs; `.github/workflows/release.yml` runs it on `v*` tags (logic tests only on CI,
 since snapshot images vary by machine) and attaches the DMG to the release.
 Nick has no Developer ID Application certificate yet (only Development and
 Apple Distribution, team WYMF4736GN), so DMGs are unsigned until he makes one.

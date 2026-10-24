@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAFAFB"/>
+      <stop offset="1" stop-color="#E4E4E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="660" height="400" fill="url(#bg)"/>
+  <!-- Arrow from the app (left icon, centred at 165,180) to Applications (right, 495,180) -->
+  <path d="M 262 180 L 386 180" stroke="#8E8E93" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.1 14"/>
+  <path d="M 380 166 L 400 180 L 380 194" fill="none" stroke="#8E8E93" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="330" y="330" text-anchor="middle" font-family="-apple-system, Helvetica Neue, Helvetica" font-size="15" fill="#6E6E73">Drag Lanyard into Applications to install</text>
+</svg>
