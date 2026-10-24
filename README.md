@@ -26,9 +26,10 @@ YAML file you can keep, sync and share.
 
 ## Install
 
-Download `Lanyard-<version>.dmg` from
-[Releases](../../releases), open it, and drag Lanyard into Applications.
-Requires macOS 13 or later.
+**[Download Lanyard](https://github.com/njkuhne/Lanyard/releases/latest/download/Lanyard.dmg)**
+(the latest version), open it, and drag Lanyard into Applications. Requires
+macOS 13 or later. Older versions and release notes are on the
+[Releases](https://github.com/njkuhne/Lanyard/releases) page.
 
 ## Use
 
