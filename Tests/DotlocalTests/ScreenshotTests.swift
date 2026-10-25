@@ -112,6 +112,18 @@ private struct Desktop<Content: View>: View {
 private struct MenuBar: View {
     let dark: Bool
 
+    /// The real menu bar template image from the asset catalog, loaded from the
+    /// repo because SwiftPM doesn't compile the catalog.
+    private var menuBarIcon: some View {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources/Assets.xcassets/MenuBarIcon.imageset/menubar@2x.png")
+        let image = NSImage(contentsOf: url) ?? NSImage()
+        image.isTemplate = true
+        image.size = NSSize(width: 18, height: 18)
+        return Image(nsImage: image)
+    }
+
     var body: some View {
         HStack(spacing: 20) {
             Text("Finder").fontWeight(.bold)
@@ -119,7 +131,7 @@ private struct MenuBar: View {
             Spacer()
             Image(systemName: "wifi")
             Image(systemName: "battery.75percent")
-            Image(systemName: "server.rack")
+            menuBarIcon
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
                 .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.18)))

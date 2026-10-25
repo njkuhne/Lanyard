@@ -61,6 +61,15 @@ since snapshot images vary by machine) and attaches the DMG to the release.
 Nick has no Developer ID Application certificate yet (only Development and
 Apple Distribution, team WYMF4736GN), so DMGs are unsigned until he makes one.
 
+## App icon and menu bar image
+
+`scripts/make-icon.swift` renders both from one spec (a flat two-colour mark:
+a circle with three server units cut out, lights on its centre line) into
+`Resources/Assets.xcassets`: the `AppIcon` set at every macOS size and the
+`MenuBarIcon` template image at 1x/2x. Run `swift scripts/make-icon.swift`
+after changing the geometry; never hand-edit the PNGs. The screenshot tests
+draw the menu bar with the same template PNG.
+
 ## README screenshots
 
 `docs/screenshots/` is rendered by `Tests/DotlocalTests/ScreenshotTests.swift`: the
@@ -141,7 +150,10 @@ Three kinds of code, held to different bars:
 - Multiple addresses per server (LAN / Tailscale / external).
 - Reachability dot per server.
 - Keyboard navigation in the dropdown; global hotkey to open it.
-- Real app icon (the current one in `Resources/Assets.xcassets` is a placeholder).
+- A dark-mode app icon variant. The asset catalog can't carry one for a
+  macOS 13 target; it needs an Icon Composer `.icon` bundle on macOS 26.
+- Size-specific redraws of the icon for the 16 px slots, where the three
+  lights blur together.
 
 ## Files you can ignore
 

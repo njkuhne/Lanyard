@@ -11,7 +11,8 @@ struct DotlocalApp: App {
             MenuContentView()
                 .environmentObject(store)
         } label: {
-            Image(systemName: "server.rack")
+            // Template image rendered by scripts/make-icon.swift from the icon spec.
+            Image("MenuBarIcon")
         }
         .menuBarExtraStyle(.window)
     }

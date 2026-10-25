@@ -22,7 +22,7 @@ standing project guide; this file is the "where we left off".
 1. Build with the `xcodebuild` command in `CLAUDE.md`. Fix errors and rebuild
    until it's clean. Fix new warnings where it's cheap.
 2. Launch the app. Check that:
-   - a server-rack icon appears in the menu bar, with no Dock icon;
+   - the dotlocal icon (a dot with three servers cut out) appears in the menu bar, with no Dock icon;
    - the dropdown shows the sample servers from the generated `servers.yaml`;
    - clicking a web icon opens the browser and an smb icon opens Finder;
    - **Edit Servers…** opens the editor window, both tabs work, and saving
