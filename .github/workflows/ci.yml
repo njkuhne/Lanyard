@@ -25,5 +25,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Lanyard-dmg
-          path: build/Lanyard-*.dmg
+          name: dotlocal-dmg
+          path: build/dotlocal-*.dmg

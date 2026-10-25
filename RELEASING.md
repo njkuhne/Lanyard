@@ -1,4 +1,4 @@
-# Releasing Lanyard
+# Releasing dotlocal
 
 Every tag is a release. To cut one from a clean, pushed `main`:
 
@@ -23,7 +23,7 @@ Add these repository secrets (details in `.github/workflows/release.yml`):
 To sign and notarize locally instead:
 
 ```sh
-xcrun notarytool store-credentials lanyard-notary   # once
+xcrun notarytool store-credentials dotlocal-notary   # once
 DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)" \
-NOTARY_PROFILE=lanyard-notary scripts/make-dmg.sh
+NOTARY_PROFILE=dotlocal-notary scripts/make-dmg.sh
 ```

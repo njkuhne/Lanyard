@@ -15,7 +15,7 @@ enum LoginItem {
                 try SMAppService.mainApp.unregister()
             }
         } catch {
-            NSLog("Lanyard: couldn't change launch at login: \(error)")
+            NSLog("dotlocal: couldn't change launch at login: \(error)")
         }
     }
 }

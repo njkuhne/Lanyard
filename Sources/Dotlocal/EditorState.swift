@@ -111,7 +111,7 @@ final class EditorState: ObservableObject {
     static func hasComments(_ text: String) -> Bool {
         text.split(separator: "\n").contains { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            return trimmed.hasPrefix("#") && trimmed != "# Lanyard config"
+            return trimmed.hasPrefix("#") && trimmed != "# dotlocal config"
         }
     }
 

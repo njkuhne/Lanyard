@@ -1,7 +1,7 @@
 enum SampleConfig {
     /// Written on first launch: the format notes and an empty list.
     static let starter = """
-# Lanyard — your servers, one click away.
+# dotlocal — your servers, one click away.
 # Changes are picked up automatically when you save this file.
 #
 # Each server has a name, an address, and a list of services. The order here is

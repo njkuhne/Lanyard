@@ -72,7 +72,7 @@ struct EditorItem: Identifiable, Equatable {
 }
 
 enum EditorModel {
-    static func items(from config: LanyardConfig) -> [EditorItem] {
+    static func items(from config: DotlocalConfig) -> [EditorItem] {
         config.entries.map { entry -> EditorItem in
             switch entry {
             case .divider(_, let title):
@@ -100,7 +100,7 @@ enum EditorModel {
     }
 
     static func yaml(from items: [EditorItem]) -> String {
-        let out = "# Lanyard config\nservers:\n"
+        let out = "# dotlocal config\nservers:\n"
         if items.isEmpty { return out + "  []\n" }
         return out + items.map(entryYAML).joined()
     }

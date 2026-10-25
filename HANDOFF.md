@@ -9,12 +9,12 @@ standing project guide; this file is the "where we left off".
 - All code, the Xcode project, the placeholder icon, README and LICENSE are written.
 - **Nothing has ever been compiled.** The previous session ran in a Linux VM
   and couldn't run Xcode. Expect some compile errors.
-- `Lanyard.xcodeproj/project.pbxproj` was **hand-generated**, not made by Xcode.
+- `dotlocal.xcodeproj/project.pbxproj` was **hand-generated**, not made by Xcode.
   If Xcode refuses to open it or behaves oddly, regenerate it with XcodeGen
   (`brew install xcodegen && xcodegen generate`, using `project.yml`) instead
   of debugging the pbxproj by hand.
 - Git may not be initialised yet. If `git status` fails, run
-  `git init && git add -A && git commit -m "Lanyard v0.1 (uncompiled)"`
+  `git init && git add -A && git commit -m "dotlocal v0.1 (uncompiled)"`
   before changing anything, so there's a baseline to diff against.
 
 ## Do this first, in order
@@ -36,7 +36,7 @@ standing project guide; this file is the "where we left off".
   `[AnyHashable: Any]` and handles both. If parsing comes back empty, check what
   `Yams.load` actually returns.
 - **Sandbox**: the config path resolves inside the container, so it's under
-  `~/Library/Containers/net.nickopolis.Lanyard/…`, not `~/Library/Application Support`.
+  `~/Library/Containers/net.nickopolis.dotlocal/…`, not `~/Library/Application Support`.
   `NSWorkspace.open` for `ssh://`, `vnc://` and `smb://` should still work from
   the sandbox. Verify that it does.
 - **The editor window** is an AppKit `NSWindow` hosting SwiftUI
@@ -53,7 +53,7 @@ standing project guide; this file is the "where we left off".
 
 - Director of Product Management, with an iOS development background. He's
   comfortable with Xcode and Swift but wants things to just work.
-- He wants Lanyard to appeal to homelab people: open source, YAML config, and
+- He wants dotlocal to appeal to homelab people: open source, YAML config, and
   sold on the Mac App Store.
 - He tests with a Synology NAS (web UI + file sharing) and a Mac mini
   (Screen Sharing + file sharing).

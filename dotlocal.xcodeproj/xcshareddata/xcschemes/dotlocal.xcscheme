@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "42AEFBAE01D2DFD981F7DA7D"
-               BuildableName = "Lanyard.app"
-               BlueprintName = "Lanyard"
-               ReferencedContainer = "container:Lanyard.xcodeproj">
+               BuildableName = "dotlocal.app"
+               BlueprintName = "dotlocal"
+               ReferencedContainer = "container:dotlocal.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "42AEFBAE01D2DFD981F7DA7D"
-            BuildableName = "Lanyard.app"
-            BlueprintName = "Lanyard"
-            ReferencedContainer = "container:Lanyard.xcodeproj">
+            BuildableName = "dotlocal.app"
+            BlueprintName = "dotlocal"
+            ReferencedContainer = "container:dotlocal.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "42AEFBAE01D2DFD981F7DA7D"
-            BuildableName = "Lanyard.app"
-            BlueprintName = "Lanyard"
-            ReferencedContainer = "container:Lanyard.xcodeproj">
+            BuildableName = "dotlocal.app"
+            BlueprintName = "dotlocal"
+            ReferencedContainer = "container:dotlocal.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

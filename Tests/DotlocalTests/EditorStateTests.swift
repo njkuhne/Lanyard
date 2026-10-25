@@ -1,5 +1,5 @@
 import XCTest
-@testable import Lanyard
+@testable import Dotlocal
 
 final class EditorStateTests: XCTestCase {
     private var directory: URL!
@@ -10,7 +10,7 @@ final class EditorStateTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent("LanyardEditor-\(UUID().uuidString)")
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("DotlocalEditor-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -140,7 +140,7 @@ final class EditorStateTests: XCTestCase {
 
     func testHasComments() {
         XCTAssertTrue(EditorState.hasComments("  # note\nservers:\n"))
-        XCTAssertFalse(EditorState.hasComments("# Lanyard config\nservers:\n"))
+        XCTAssertFalse(EditorState.hasComments("# dotlocal config\nservers:\n"))
         XCTAssertFalse(EditorState.hasComments("servers:\n"))
     }
 
@@ -260,7 +260,7 @@ final class EditorStateTests: XCTestCase {
         XCTAssertTrue(state.add())
         XCTAssertEqual(state.added, "nas.lan")
         XCTAssertNil(state.error)
-        XCTAssertTrue(s.rawText.hasPrefix("# Lanyard"), "comments survive")
+        XCTAssertTrue(s.rawText.hasPrefix("# dotlocal"), "comments survive")
         guard case .server(let server) = s.config.entries.first else { return XCTFail("no server") }
         XCTAssertEqual(server.services.map(\.kind), [.web, .smb])
         XCTAssertEqual(server.services[0].url, "https://nas.lan:5001")

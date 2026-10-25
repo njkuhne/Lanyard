@@ -127,21 +127,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # One asset with a fixed name, so releases/latest/download/Lanyard.dmg always works.
-          cp build/Lanyard-*.dmg build/Lanyard.dmg
+          # One asset with a fixed name, so releases/latest/download/dotlocal.dmg always works.
+          cp build/dotlocal-*.dmg build/dotlocal.dmg
           if [ "$PRERELEASE" = "true" ]; then FLAGS=(--prerelease --latest=false); else FLAGS=(--latest); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md" "${FLAGS[@]}"
-            gh release upload "$TAG" build/Lanyard.dmg --clobber
+            gh release upload "$TAG" build/dotlocal.dmg --clobber
           else
-            gh release create "$TAG" build/Lanyard.dmg --title "Lanyard ${TAG#v}" \
+            gh release create "$TAG" build/dotlocal.dmg --title "dotlocal ${TAG#v}" \
               --notes-file "$RUNNER_TEMP/notes.md" --verify-tag "${FLAGS[@]}"
           fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Lanyard-${{ env.TAG }}
-          path: build/Lanyard-*.dmg
+          name: dotlocal-${{ env.TAG }}
+          path: build/dotlocal-*.dmg
 
       - name: Remove signing material
         if: always()

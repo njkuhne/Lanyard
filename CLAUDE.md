@@ -1,4 +1,7 @@
-# Lanyard
+# dotlocal
+
+> Renamed from **Lanyard** on 2026-10-25. The GitHub repo is still `njkuhne/Lanyard`
+> until it's renamed; old `Lanyard` names in history and the 0.2.0 release are expected.
 
 > New session? Read `HANDOFF.md` first. It says where the last session left off.
 
@@ -12,15 +15,15 @@ Mac App Store.
 
 ```sh
 # Build (no signing needed locally)
-xcodebuild -project Lanyard.xcodeproj -scheme Lanyard -configuration Debug \
+xcodebuild -project dotlocal.xcodeproj -scheme dotlocal -configuration Debug \
   -derivedDataPath build/DerivedData build 2>&1 | xcbeautify || true
 # (no xcbeautify? drop the pipe, or: grep -E "error:|warning:")
 
 # Run the built app
-open build/DerivedData/Build/Products/Debug/Lanyard.app
+open build/DerivedData/Build/Products/Debug/dotlocal.app
 
 # Quit a running copy before relaunching
-pkill -x Lanyard
+pkill -x dotlocal
 ```
 
 After any change: build, fix every error, and re-build until clean before
@@ -29,7 +32,7 @@ reporting done. Treat new warnings as worth fixing too.
 ## Snapshot tests
 
 ```sh
-swift test                      # compare UI against Tests/LanyardTests/__Snapshots__
+swift test                      # compare UI against Tests/DotlocalTests/__Snapshots__
 RECORD_SNAPSHOTS=1 swift test   # re-record after an intended UI change, then review the PNGs
 ```
 
@@ -42,7 +45,7 @@ didn't until its deployment-target override was removed.
 
 ## Releasing
 
-`scripts/make-dmg.sh` builds a universal Release app and `build/Lanyard-<version>.dmg`
+`scripts/make-dmg.sh` builds a universal Release app and `build/dotlocal-<version>.dmg`
 (`VERSION=0.2.0` overrides the version). Unsigned unless `DEVELOPER_ID` is set;
 notarizes with `NOTARY_PROFILE` or `NOTARY_KEY`/`NOTARY_KEY_ID`/`NOTARY_ISSUER`.
 The DMG window layout (background with arrow, icon positions) is applied by
@@ -60,7 +63,7 @@ Apple Distribution, team WYMF4736GN), so DMGs are unsigned until he makes one.
 
 ## README screenshots
 
-`docs/screenshots/` is rendered by `Tests/LanyardTests/ScreenshotTests.swift`: the
+`docs/screenshots/` is rendered by `Tests/DotlocalTests/ScreenshotTests.swift`: the
 real views placed on a neutral desktop with a menu bar and window chrome, using
 the demo config (never a real one). Regenerate with
 `SCREENSHOTS=1 swift test --filter ScreenshotTests`; it's skipped otherwise.
@@ -80,7 +83,7 @@ Three kinds of code, held to different bars:
 - **Views, snapshot-tested:** `MenuContentView`, `ConfigEditorView`,
   `YAMLEditorView`, `SymbolPicker`. Their bodies render in the snapshot tests;
   button actions are one-line calls into the logic above.
-- **System wiring, excluded:** `LanyardApp` (`@main`), `EditorWindow` (NSWindow
+- **System wiring, excluded:** `DotlocalApp` (`@main`), `EditorWindow` (NSWindow
   and the save prompt), `LoginItem` (SMAppService), `SystemWiring` (alerts, file
   panels, NSWorkspace, pasteboard, `Launcher`). These only do anything with a
   person at the screen; the logic deciding when to call them is tested through
@@ -93,10 +96,10 @@ Three kinds of code, held to different bars:
 
 ## How it works
 
-- `Sources/Lanyard/LanyardApp.swift` — `@main`, `MenuBarExtra` with `.window` style.
+- `Sources/Dotlocal/DotlocalApp.swift` — `@main`, `MenuBarExtra` with `.window` style.
   Dock icon hidden via `LSUIElement` in `Resources/Info.plist` and `.accessory` policy.
 - `ConfigStore.swift` — owns `servers.yaml` in Application Support (inside the
-  sandbox container: `~/Library/Containers/net.nickopolis.Lanyard/Data/Library/Application Support/Lanyard/servers.yaml`).
+  sandbox container: `~/Library/Containers/net.nickopolis.dotlocal/Data/Library/Application Support/dotlocal/servers.yaml`).
   Creates a sample on first launch, watches the file and reloads on change,
   validates before every save, keeps the last good config if the file is broken.
 - `ConfigParser.swift` — YAML → model via Yams, with human-readable errors.
@@ -122,7 +125,7 @@ Three kinds of code, held to different bars:
 
 ## Decisions (keep these)
 
-- **Mac App Store app**, so it stays **sandboxed** (`Resources/Lanyard.entitlements`).
+- **Mac App Store app**, so it stays **sandboxed** (`Resources/Dotlocal.entitlements`).
   Don't read config from `~/.config` or anywhere outside the container.
 - **YAML is the source of truth**; the GUI editor reads and writes the same file.
   Users must be able to paste a whole config in and save it.

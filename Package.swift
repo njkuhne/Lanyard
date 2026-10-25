@@ -2,24 +2,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "Lanyard",
+    name: "Dotlocal",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "Lanyard", targets: ["Lanyard"])
+        .executable(name: "Dotlocal", targets: ["Dotlocal"])
     ],
     dependencies: [
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.1.0")
     ],
     targets: [
         .executableTarget(
-            name: "Lanyard",
+            name: "Dotlocal",
             dependencies: ["Yams"],
-            path: "Sources/Lanyard"
+            path: "Sources/Dotlocal"
         ),
         .testTarget(
-            name: "LanyardTests",
-            dependencies: ["Lanyard"],
-            path: "Tests/LanyardTests",
+            name: "DotlocalTests",
+            dependencies: ["Dotlocal"],
+            path: "Tests/DotlocalTests",
             exclude: ["__Snapshots__"]
         ),
     ]

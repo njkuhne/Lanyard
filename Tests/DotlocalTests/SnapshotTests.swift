@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 import XCTest
-@testable import Lanyard
+@testable import Dotlocal
 
 @MainActor
 final class SnapshotTests: XCTestCase {
@@ -11,7 +11,7 @@ final class SnapshotTests: XCTestCase {
         super.setUp()
         _ = NSApplication.shared
         directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("LanyardSnapshots-\(UUID().uuidString)")
+            .appendingPathComponent("DotlocalSnapshots-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 

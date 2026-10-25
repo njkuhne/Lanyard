@@ -1,5 +1,5 @@
 import XCTest
-@testable import Lanyard
+@testable import Dotlocal
 
 final class ConfigParserTests: XCTestCase {
     private func parseError(_ yaml: String) -> String? {
@@ -210,7 +210,7 @@ final class ConfigStoreTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent("LanyardStore-\(UUID().uuidString)")
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("DotlocalStore-\(UUID().uuidString)")
     }
 
     override func tearDown() {
@@ -219,7 +219,7 @@ final class ConfigStoreTests: XCTestCase {
         super.tearDown()
     }
 
-    private var fileURL: URL { directory.appendingPathComponent("Lanyard/servers.yaml") }
+    private var fileURL: URL { directory.appendingPathComponent("dotlocal/servers.yaml") }
 
     func testCreatesAnEmptyStarterOnFirstLaunch() {
         let store = ConfigStore(fileURL: fileURL)
@@ -231,7 +231,7 @@ final class ConfigStoreTests: XCTestCase {
     }
 
     func testDefaultLocationIsApplicationSupport() {
-        XCTAssertTrue(ConfigStore.defaultFileURL.path.hasSuffix("Application Support/Lanyard/servers.yaml"))
+        XCTAssertTrue(ConfigStore.defaultFileURL.path.hasSuffix("Application Support/dotlocal/servers.yaml"))
     }
 
     func testBrokenFileKeepsTheLastGoodConfig() throws {
@@ -307,7 +307,7 @@ final class EditorModelTests: XCTestCase {
         XCTAssertTrue(yaml.contains("- ssh: { url: \"ssh://root@a.lan:2222\", icon: terminal.fill }"))
         XCTAssertTrue(yaml.contains("- web: \"https://a.lan:5001\"\n"), "a lone address is written on one line")
         XCTAssertTrue(yaml.contains("- web: { name: \"yes\", badge: \"Y\" }"), "reserved words are quoted")
-        XCTAssertEqual(EditorModel.yaml(from: []), "# Lanyard config\nservers:\n  []\n")
+        XCTAssertEqual(EditorModel.yaml(from: []), "# dotlocal config\nservers:\n  []\n")
         XCTAssertEqual(try ConfigParser.parse(yaml).entries.count, 3)
     }
 

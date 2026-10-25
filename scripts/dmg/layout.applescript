@@ -14,7 +14,7 @@ on run argv
             set icon size of viewOptions to 112
             set text size of viewOptions to 13
             set background picture of viewOptions to file ".background:background.tiff"
-            set position of item "Lanyard.app" of container window to {165, 180}
+            set position of item "dotlocal.app" of container window to {165, 180}
             set position of item "Applications" of container window to {495, 180}
             close
             open

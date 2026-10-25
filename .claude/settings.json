@@ -4,8 +4,8 @@
       "Bash(xcodebuild:*)",
       "Bash(xcbeautify:*)",
       "Bash(swift build:*)",
-      "Bash(open build/DerivedData/Build/Products/Debug/Lanyard.app)",
-      "Bash(pkill -x Lanyard)",
+      "Bash(open build/DerivedData/Build/Products/Debug/dotlocal.app)",
+      "Bash(pkill -x dotlocal)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)"

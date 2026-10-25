@@ -1,15 +1,15 @@
-# Lanyard
+# dotlocal
 
 Your home servers, one click away from the Mac menu bar.
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menu-dark.png">
-    <img src="docs/screenshots/menu.png" alt="Lanyard's menu open from the menu bar: servers with a button per service" width="760">
+    <img src="docs/screenshots/menu.png" alt="dotlocal's menu open from the menu bar: servers with a button per service" width="760">
   </picture>
 </p>
 
-Lanyard lives in the menu bar (no Dock icon). Click it to see your servers, each
+dotlocal lives in the menu bar (no Dock icon). Click it to see your servers, each
 with a button per service. Click a button and macOS opens the right tool:
 
 | Service | Opens |
@@ -26,14 +26,14 @@ YAML file you can keep, sync and share.
 
 ## Install
 
-**[Download Lanyard](https://github.com/njkuhne/Lanyard/releases/latest/download/Lanyard.dmg)**
-(the latest version), open it, and drag Lanyard into Applications. Requires
+**[Download dotlocal](https://github.com/njkuhne/Lanyard/releases/latest/download/dotlocal.dmg)**
+(the latest version), open it, and drag dotlocal into Applications. Requires
 macOS 13 or later. Older versions and release notes are on the
 [Releases](https://github.com/njkuhne/Lanyard/releases) page.
 
 ## Use
 
-On first launch Lanyard asks for your first server: its address, and what you
+On first launch dotlocal asks for your first server: its address, and what you
 open on it.
 
 <p align="center">
@@ -82,18 +82,18 @@ servers:
   file is order in the menu.
 
 Passwords are never stored; macOS and your Keychain handle those. The file is
-`servers.yaml` in Lanyard's Application Support folder inside its sandbox
-container, and Lanyard reloads it when it changes.
+`servers.yaml` in dotlocal's Application Support folder inside its sandbox
+container, and dotlocal reloads it when it changes.
 
 ## Build
 
 Requires Xcode 15 or later.
 
 ```sh
-open Lanyard.xcodeproj     # then ⌘R
+open dotlocal.xcodeproj     # then ⌘R
 swift test                 # tests, including UI snapshot tests
 scripts/coverage.sh        # fails unless the logic is 100% covered
-scripts/make-dmg.sh        # builds build/Lanyard-<version>.dmg
+scripts/make-dmg.sh        # builds build/dotlocal-<version>.dmg
 SCREENSHOTS=1 swift test --filter ScreenshotTests   # regenerates docs/screenshots
 ```
 

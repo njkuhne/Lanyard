@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PROJECT=Lanyard.xcodeproj/project.pbxproj
+PROJECT=dotlocal.xcodeproj/project.pbxproj
 CURRENT=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/\1/p' "$PROJECT" | head -1)
 BUILD=$(sed -nE 's/.*CURRENT_PROJECT_VERSION = ([0-9]+);/\1/p' "$PROJECT" | head -1)
 IFS=. read -r MAJOR MINOR PATCH <<<"$CURRENT"

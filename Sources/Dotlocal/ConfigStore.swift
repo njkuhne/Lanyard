@@ -6,7 +6,7 @@ import Foundation
 /// When sandboxed (App Store), Application Support resolves inside the app's
 /// container, so the same code works in both builds.
 final class ConfigStore: ObservableObject {
-    @Published private(set) var config = LanyardConfig()
+    @Published private(set) var config = DotlocalConfig()
     @Published private(set) var errorMessage: String?
     @Published private(set) var rawText = ""
 
@@ -22,7 +22,7 @@ final class ConfigStore: ObservableObject {
     /// Inside the sandbox container when sandboxed.
     static var defaultFileURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Lanyard/servers.yaml")
+            .appendingPathComponent("dotlocal/servers.yaml")
     }
 
     init(fileURL: URL = ConfigStore.defaultFileURL) {

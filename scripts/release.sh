@@ -20,12 +20,12 @@ if [[ "$ARG" == *-* ]]; then BUMP="${ARG%%-*}"; SUFFIX="-${ARG#*-}"; fi
 VERSION=$(scripts/bump-version.sh "$BUMP")
 TAG="v$VERSION$SUFFIX"
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-    git checkout -- Lanyard.xcodeproj/project.pbxproj project.yml
+    git checkout -- dotlocal.xcodeproj/project.pbxproj project.yml
     echo "$TAG already exists." >&2; exit 1
 fi
 
 git commit -qam "Release $TAG"
-git tag -a "$TAG" -m "Lanyard $TAG"
+git tag -a "$TAG" -m "dotlocal $TAG"
 git push -q origin main "$TAG"
 
 echo "Tagged and pushed $TAG. GitHub is building the release:"

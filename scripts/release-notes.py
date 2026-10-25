@@ -72,7 +72,7 @@ def notes(tag, repo, unsigned):
         out.append("- Maintenance release.")
 
     out += ["", "## Install", "",
-            "Download **Lanyard.dmg** below, open it, and drag Lanyard into Applications. "
+            "Download **dotlocal.dmg** below, open it, and drag dotlocal into Applications. "
             "Requires macOS 13 or later."]
     if unsigned:
         out += ["", "This build isn't notarized yet: on first launch, open it from "

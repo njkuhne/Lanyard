@@ -103,7 +103,7 @@ enum AppInfo {
 }
 
 extension AppearanceMode {
-    /// Applies to every Lanyard window, including the menu bar dropdown.
+    /// Applies to every dotlocal window, including the menu bar dropdown.
     func apply() {
         NSApp.appearance = appearanceName.map { NSAppearance(named: NSAppearance.Name($0)) } ?? nil
     }

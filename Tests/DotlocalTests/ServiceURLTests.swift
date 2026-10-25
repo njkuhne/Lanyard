@@ -1,5 +1,5 @@
 import XCTest
-@testable import Lanyard
+@testable import Dotlocal
 
 final class ServiceURLTests: XCTestCase {
     private func url(_ yaml: String) throws -> String? {

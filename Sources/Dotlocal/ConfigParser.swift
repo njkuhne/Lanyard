@@ -18,9 +18,9 @@ struct ConfigError: LocalizedError {
     }
 }
 
-/// Turns servers.yaml into a LanyardConfig, with error messages written for humans.
+/// Turns servers.yaml into a DotlocalConfig, with error messages written for humans.
 enum ConfigParser {
-    static func parse(_ text: String) throws -> LanyardConfig {
+    static func parse(_ text: String) throws -> DotlocalConfig {
         let root: Any?
         do {
             root = try Yams.load(yaml: text)
@@ -28,14 +28,14 @@ enum ConfigParser {
             throw ConfigError("Couldn't read the YAML: \(error)")
         }
 
-        guard let root, !(root is NSNull) else { return LanyardConfig() } // empty file
+        guard let root, !(root is NSNull) else { return DotlocalConfig() } // empty file
         guard let top = dict(root) else {
             throw ConfigError("The file should start with `servers:`")
         }
         guard let rawList = top["servers"] else {
             throw ConfigError("Missing a `servers:` list")
         }
-        if rawList is NSNull { return LanyardConfig() }
+        if rawList is NSNull { return DotlocalConfig() }
         guard let list = rawList as? [Any] else {
             throw ConfigError("`servers:` should be a list, with each item starting with `- `")
         }
@@ -96,7 +96,7 @@ enum ConfigParser {
                 showIcon: bool(fields["show_icon"]) ?? true
             )))
         }
-        return LanyardConfig(entries: entries)
+        return DotlocalConfig(entries: entries)
     }
 
     /// Services can be written as:

@@ -1,10 +1,10 @@
 import AppKit
 import SwiftUI
 import XCTest
-@testable import Lanyard
+@testable import Dotlocal
 
 /// README screenshots: the real UI placed on a neutral desktop with a menu bar,
-/// so readers see where Lanyard lives. Not a regression test; run with
+/// so readers see where dotlocal lives. Not a regression test; run with
 /// `SCREENSHOTS=1 swift test --filter ScreenshotTests` to regenerate docs/screenshots.
 @MainActor
 final class ScreenshotTests: XCTestCase {
@@ -13,7 +13,7 @@ final class ScreenshotTests: XCTestCase {
     override func setUpWithError() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["SCREENSHOTS"] != nil, "Set SCREENSHOTS=1 to regenerate README screenshots")
         _ = NSApplication.shared
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent("LanyardShots-\(UUID().uuidString)")
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("DotlocalShots-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -89,7 +89,7 @@ final class ScreenshotTests: XCTestCase {
     }
 }
 
-/// A neutral macOS-style desktop: wallpaper, a menu bar with Lanyard's icon, and content below it.
+/// A neutral macOS-style desktop: wallpaper, a menu bar with dotlocal's icon, and content below it.
 private struct Desktop<Content: View>: View {
     let dark: Bool
     @ViewBuilder let content: Content

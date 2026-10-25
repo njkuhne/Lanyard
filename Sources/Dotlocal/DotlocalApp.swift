@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @main
-struct LanyardApp: App {
+struct DotlocalApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = ConfigStore.shared
 

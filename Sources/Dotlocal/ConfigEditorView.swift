@@ -501,7 +501,7 @@ struct AddServerView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(state.isFirstServer ? "Add your first server" : "Add a server")
                     .font(.title2.weight(.semibold))
-                Text("Lanyard keeps your servers one click away in the menu bar.")
+                Text("dotlocal keeps your servers one click away in the menu bar.")
                     .foregroundStyle(.secondary)
             }
 

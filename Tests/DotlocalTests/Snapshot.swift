@@ -46,7 +46,7 @@ func assertSnapshot<V: View>(
         return
     }
     if difference > 0.001 {
-        // Package root is two levels above Tests/LanyardTests.
+        // Package root is two levels above Tests/DotlocalTests.
         let failures = testDir.deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("build/snapshot-failures")
         try? fm.createDirectory(at: failures, withIntermediateDirectories: true)

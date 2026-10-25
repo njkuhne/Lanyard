@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Lanyard's greyscale accent, used instead of the system's blue.
+/// dotlocal's greyscale accent, used instead of the system's blue.
 enum Theme {
-    static let accent = Color(nsColor: NSColor(name: "LanyardAccent") { appearance in
+    static let accent = Color(nsColor: NSColor(name: "DotlocalAccent") { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             ? NSColor(white: 0.62, alpha: 1)
             : NSColor(white: 0.24, alpha: 1)
@@ -366,12 +366,12 @@ struct FooterView: View {
                     set: { LoginItem.setEnabled($0) }
                 ))
                 Divider()
-                Button("About Lanyard") {
+                Button("About dotlocal") {
                     Launcher.closeMenu()
                     NSApp.activate(ignoringOtherApps: true)
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
-                Button("Quit Lanyard") { NSApp.terminate(nil) }
+                Button("Quit dotlocal") { NSApp.terminate(nil) }
                     .keyboardShortcut("q")
             } label: {
                 Image(systemName: "gearshape")

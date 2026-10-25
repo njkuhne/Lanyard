@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		06248CC8B93DAE5A32D2FB94 /* LanyardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78E172B67AC60D1A17E98D4F /* LanyardApp.swift */; };
+		06248CC8B93DAE5A32D2FB94 /* DotlocalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78E172B67AC60D1A17E98D4F /* DotlocalApp.swift */; };
 		06C7FBCD4B7DC4BFCFB8ABD1 /* MenuContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8FACC92CCA74A686737BE03 /* MenuContentView.swift */; };
 		13431ACE8BEBD13E434A35B9 /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C34471EE7648BDFF9C26EC6A /* LoginItem.swift */; };
 		139353F907381082AB88E057 /* ConfigEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9B90AFBE33301DCE7CD6EC /* ConfigEditorView.swift */; };
@@ -34,9 +34,9 @@
 		64C6110176C270D7B1DC1D40 /* ServiceKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceKind.swift; sourceTree = "<group>"; };
 		6B10FE89E7FD7115AE50DF7A /* EditorWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorWindow.swift; sourceTree = "<group>"; };
 		70D2713212DD586FF8435327 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		78E172B67AC60D1A17E98D4F /* LanyardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanyardApp.swift; sourceTree = "<group>"; };
-		7F6D01D6546BCD07518D8398 /* Lanyard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lanyard.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9AF1852C70EB12E8A4E3FEEB /* Lanyard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lanyard.entitlements; sourceTree = "<group>"; };
+		78E172B67AC60D1A17E98D4F /* DotlocalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotlocalApp.swift; sourceTree = "<group>"; };
+		7F6D01D6546BCD07518D8398 /* dotlocal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dotlocal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AF1852C70EB12E8A4E3FEEB /* Dotlocal.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Dotlocal.entitlements; sourceTree = "<group>"; };
 		B8FACC92CCA74A686737BE03 /* MenuContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuContentView.swift; sourceTree = "<group>"; };
 		C34471EE7648BDFF9C26EC6A /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		CD9B90AFBE33301DCE7CD6EC /* ConfigEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigEditorView.swift; sourceTree = "<group>"; };
@@ -65,7 +65,7 @@
 		0A2C978E52A76F0AA9F68BB5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7F6D01D6546BCD07518D8398 /* Lanyard.app */,
+				7F6D01D6546BCD07518D8398 /* dotlocal.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,7 +73,7 @@
 		2B731CEFC6751AAE0EC69B98 = {
 			isa = PBXGroup;
 			children = (
-				D8DBA3F9900DD17689CA0C4D /* Lanyard */,
+				D8DBA3F9900DD17689CA0C4D /* dotlocal */,
 				307A90002D1285ED8C05A9E0 /* Resources */,
 				0A2C978E52A76F0AA9F68BB5 /* Products */,
 			);
@@ -84,12 +84,12 @@
 			children = (
 				0B6845EF9D6D0093A0394C43 /* Assets.xcassets */,
 				70D2713212DD586FF8435327 /* Info.plist */,
-				9AF1852C70EB12E8A4E3FEEB /* Lanyard.entitlements */,
+				9AF1852C70EB12E8A4E3FEEB /* Dotlocal.entitlements */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		D8DBA3F9900DD17689CA0C4D /* Lanyard */ = {
+		D8DBA3F9900DD17689CA0C4D /* dotlocal */ = {
 			isa = PBXGroup;
 			children = (
 				CD9B90AFBE33301DCE7CD6EC /* ConfigEditorView.swift */,
@@ -97,7 +97,7 @@
 				E89E0607EFA239A96E89EBF4 /* ConfigStore.swift */,
 				1712B114E347024B86593CEB /* EditorModel.swift */,
 				6B10FE89E7FD7115AE50DF7A /* EditorWindow.swift */,
-				78E172B67AC60D1A17E98D4F /* LanyardApp.swift */,
+				78E172B67AC60D1A17E98D4F /* DotlocalApp.swift */,
 				C34471EE7648BDFF9C26EC6A /* LoginItem.swift */,
 				B8FACC92CCA74A686737BE03 /* MenuContentView.swift */,
 				040B1FC762C9247C593AC8EF /* Model.swift */,
@@ -109,16 +109,16 @@
 				300E6C5CDBE24655BBE8E231 /* SymbolCatalog.swift */,
 				A5541137F21944C983FFF39A /* EditorState.swift */,
 			);
-			name = Lanyard;
-			path = Sources/Lanyard;
+			name = dotlocal;
+			path = Sources/Dotlocal;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		42AEFBAE01D2DFD981F7DA7D /* Lanyard */ = {
+		42AEFBAE01D2DFD981F7DA7D /* dotlocal */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 94E92F4374F7B1A84E405A21 /* Build configuration list for PBXNativeTarget "Lanyard" */;
+			buildConfigurationList = 94E92F4374F7B1A84E405A21 /* Build configuration list for PBXNativeTarget "dotlocal" */;
 			buildPhases = (
 				FCA229C23F166EBB0BA5029E /* Sources */,
 				DAF6AA633395B1B76148E35B /* Frameworks */,
@@ -128,12 +128,12 @@
 			);
 			dependencies = (
 			);
-			name = Lanyard;
+			name = dotlocal;
 			packageProductDependencies = (
 				30FD66F52895C73617519BA8 /* Yams */,
 			);
-			productName = Lanyard;
-			productReference = 7F6D01D6546BCD07518D8398 /* Lanyard.app */;
+			productName = dotlocal;
+			productReference = 7F6D01D6546BCD07518D8398 /* dotlocal.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -151,7 +151,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 82BEFE99DEE50030C2229134 /* Build configuration list for PBXProject "Lanyard" */;
+			buildConfigurationList = 82BEFE99DEE50030C2229134 /* Build configuration list for PBXProject "dotlocal" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -167,7 +167,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				42AEFBAE01D2DFD981F7DA7D /* Lanyard */,
+				42AEFBAE01D2DFD981F7DA7D /* dotlocal */,
 			);
 		};
 /* End PBXProject section */
@@ -193,7 +193,7 @@
 				21FF40C804095B3FB3EE8B47 /* ConfigStore.swift in Sources */,
 				F4845CD5CA00B6897275F59E /* EditorModel.swift in Sources */,
 				1DC4A366E9F6C96AE555832C /* EditorWindow.swift in Sources */,
-				06248CC8B93DAE5A32D2FB94 /* LanyardApp.swift in Sources */,
+				06248CC8B93DAE5A32D2FB94 /* DotlocalApp.swift in Sources */,
 				13431ACE8BEBD13E434A35B9 /* LoginItem.swift in Sources */,
 				06C7FBCD4B7DC4BFCFB8ABD1 /* MenuContentView.swift in Sources */,
 				CE522CC791DBFE184C2C52F7 /* Model.swift in Sources */,
@@ -268,7 +268,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Resources/Lanyard.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Resources/Dotlocal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -283,7 +283,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = net.nickopolis.Lanyard;
+				PRODUCT_BUNDLE_IDENTIFIER = net.nickopolis.dotlocal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -341,7 +341,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Resources/Lanyard.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Resources/Dotlocal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -356,7 +356,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = net.nickopolis.Lanyard;
+				PRODUCT_BUNDLE_IDENTIFIER = net.nickopolis.dotlocal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -366,7 +366,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		82BEFE99DEE50030C2229134 /* Build configuration list for PBXProject "Lanyard" */ = {
+		82BEFE99DEE50030C2229134 /* Build configuration list for PBXProject "dotlocal" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4257995D5FEB097455192277 /* Debug */,
@@ -375,7 +375,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		94E92F4374F7B1A84E405A21 /* Build configuration list for PBXNativeTarget "Lanyard" */ = {
+		94E92F4374F7B1A84E405A21 /* Build configuration list for PBXNativeTarget "dotlocal" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A3F61B41957AEA1EFA63EB05 /* Debug */,

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds Lanyard.app (universal, Release) and packages it as build/Lanyard-<version>.dmg.
+# Builds dotlocal.app (universal, Release) and packages it as build/dotlocal-<version>.dmg.
 #
 # VERSION (e.g. 0.2.0) overrides the version in the project; releases set it from the tag.
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 BUILD=build/release
-APP="$BUILD/DerivedData/Build/Products/Release/Lanyard.app"
+APP="$BUILD/DerivedData/Build/Products/Release/dotlocal.app"
 rm -rf "$BUILD"
 
 SIGNING=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
@@ -26,17 +26,17 @@ fi
 [ -n "${VERSION:-}" ] && SIGNING+=(MARKETING_VERSION="$VERSION")
 
 echo "==> Building"
-xcodebuild -project Lanyard.xcodeproj -scheme Lanyard -configuration Release \
+xcodebuild -project dotlocal.xcodeproj -scheme dotlocal -configuration Release \
     -derivedDataPath "$BUILD/DerivedData" ONLY_ACTIVE_ARCH=NO "${SIGNING[@]}" \
     build 2>&1 | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" | grep -v appintentsmetadata || true
 [ -d "$APP" ] || { echo "Build failed"; exit 1; }
 codesign --verify --deep --strict "$APP"
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
-DMG="build/Lanyard-$VERSION.dmg"
+DMG="build/dotlocal-$VERSION.dmg"
 
 echo "==> Packaging $DMG"
-VOLUME="Lanyard $VERSION"
+VOLUME="dotlocal $VERSION"
 STAGE="$BUILD/dmg"
 RW="$BUILD/rw.dmg"
 mkdir -p "$STAGE/.background"

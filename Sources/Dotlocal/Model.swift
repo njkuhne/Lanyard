@@ -1,7 +1,7 @@
 import Foundation
 
 /// The parsed contents of servers.yaml.
-struct LanyardConfig {
+struct DotlocalConfig {
     var entries: [Entry] = []
 }
 
