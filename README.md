@@ -26,10 +26,10 @@ YAML file you can keep, sync and share.
 
 ## Install
 
-**[Download dotlocal](https://github.com/njkuhne/Lanyard/releases/latest/download/dotlocal.dmg)**
+**[Download dotlocal](https://github.com/njkuhne/dotlocal/releases/latest/download/dotlocal.dmg)**
 (the latest version), open it, and drag dotlocal into Applications. Requires
 macOS 13 or later. Older versions and release notes are on the
-[Releases](https://github.com/njkuhne/Lanyard/releases) page.
+[Releases](https://github.com/njkuhne/dotlocal/releases) page.
 
 ## Use
 

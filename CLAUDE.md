@@ -1,7 +1,7 @@
 # dotlocal
 
-> Renamed from **Lanyard** on 2026-10-25. The GitHub repo is still `njkuhne/Lanyard`
-> until it's renamed; old `Lanyard` names in history and the 0.2.0 release are expected.
+> Renamed from **Lanyard** on 2026-10-25 (repo: `njkuhne/dotlocal`). Old `Lanyard`
+> names in git history and the 0.2.0 release are expected.
 
 > New session? Read `HANDOFF.md` first. It says where the last session left off.
 
