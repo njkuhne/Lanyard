@@ -31,6 +31,9 @@ YAML file you can keep, sync and share.
 macOS 13 or later. Older versions and release notes are on the
 [Releases](https://github.com/njkuhne/dotlocal/releases) page.
 
+Or get it from the **[Mac App Store](https://apps.apple.com/app/id6827214815)**,
+which keeps it up to date for you. Same app, free either way.
+
 ## Use
 
 On first launch dotlocal asks for your first server: its address, and what you
