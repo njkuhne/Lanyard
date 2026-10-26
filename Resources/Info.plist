@@ -24,6 +24,8 @@
     <true/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
 </dict>

@@ -87,6 +87,56 @@ final class ScreenshotTests: XCTestCase {
         }
         try save(scene, "first-run", dark: false, width: 900, height: 600)
     }
+
+    /// Mac App Store screenshots: 1440×900 points rendered at 2x, so 2880×1800 pixels.
+    func testAppStore() throws {
+        func shot<V: View>(_ name: String, dark: Bool = false, caption: String, detail: String, @ViewBuilder _ content: () -> V) throws {
+            let scene = Desktop(dark: dark) {
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(caption).font(.system(size: 44, weight: .bold))
+                        Text(detail).font(.system(size: 22)).foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(dark ? Color.white : Color.black)
+                    .frame(width: 440, alignment: .leading)
+                    .padding(.top, 120)
+                    .padding(.leading, 90)
+                    Spacer(minLength: 0)
+                    content()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            let png = try XCTUnwrap(render(scene, width: 1440, height: 900, appearance: dark ? .dark : .light))
+            let out = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+                .deletingLastPathComponent().appendingPathComponent("docs/appstore")
+            try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+            try png.write(to: out.appendingPathComponent("\(name).png"))
+        }
+        func menu(_ yaml: String = DemoConfig.text) -> some View {
+            MenuPanel { MenuContentView().environmentObject(store(yaml)) }
+                .padding(.top, 4)
+                .padding(.trailing, 150)
+        }
+
+        try shot("1-menu", caption: "Your homelab, one click away.",
+                 detail: "Every server in your menu bar, with an icon for each service.") { menu() }
+        try shot("2-dark", dark: true, caption: "Opens the right tool.",
+                 detail: "Web UIs in your browser, shares in Finder, Screen Sharing, SSH in Terminal.") { menu() }
+        try shot("3-editor", caption: "Point and click, or YAML.",
+                 detail: "Edit servers in a form, or paste a whole config. Both write the same file.") {
+            FakeWindow(title: "Edit Servers") {
+                ConfigEditorView(store: store(), selectedIndex: 2).frame(width: 780, height: 650)
+            }
+            .padding(.top, 90)
+            .padding(.trailing, 80)
+        }
+        try shot("4-first-run", caption: "Set up in seconds.",
+                 detail: "Add a server, pick its services, and it's in your menu bar.") {
+            FakeWindow(title: "Add Server") { AddServerView(store: store(SampleConfig.starter)) }
+                .padding(.top, 150)
+                .padding(.trailing, 120)
+        }
+    }
 }
 
 /// A neutral macOS-style desktop: wallpaper, a menu bar with dotlocal's icon, and content below it.
