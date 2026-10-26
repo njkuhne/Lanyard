@@ -23,7 +23,7 @@ targets:
         PRODUCT_NAME: dotlocal
         PRODUCT_BUNDLE_IDENTIFIER: net.nickopolis.dotlocal
         MARKETING_VERSION: 1.0.0
-        CURRENT_PROJECT_VERSION: 4
+        CURRENT_PROJECT_VERSION: 5
         INFOPLIST_FILE: Resources/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: Resources/Dotlocal.entitlements
